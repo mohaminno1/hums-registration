@@ -85,6 +85,9 @@
           <h2 class="section-title" id="heading-checklist">چک‌لیست مدارک ثبت‌نام</h2>
         </div>
 
+        <!-- باکس اطلاعیه رسمی و لینک مستقیم -->
+        <div class="official-notice-stack" id="official-notice-box"></div>
+
         <div class="card checklist-card">
           <div class="checklist-toolbar">
             <div class="progress-block">
@@ -100,6 +103,7 @@
             <div class="checklist-controls">
               <div class="filter-group" role="group" aria-label="فیلتر مدارک">
                 <button type="button" class="chip-btn is-active" data-checklist-filter="all">همه</button>
+                <button type="button" class="chip-btn" data-checklist-filter="core">الزامی (عمومی)</button>
                 <button type="button" class="chip-btn" data-checklist-filter="remaining">باقیمانده‌ها</button>
               </div>
               <button type="button" class="btn-text-subtle" id="checklist-reset-btn">

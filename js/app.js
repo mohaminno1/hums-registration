@@ -197,6 +197,31 @@
   // ==========================================================================
   // ۳. بخش اول: چک‌لیست تعاملی مدارک
   // ==========================================================================
+  function renderOfficialNotice() {
+    const box = document.getElementById("official-notice-box");
+    const notice = DATA.officialNotice;
+    if (!box || !notice) return;
+
+    const linksHtml = (notice.links || [])
+      .map(
+        (lnk, i) =>
+          `<a href="${lnk.url}" target="_blank" rel="noopener noreferrer" class="official-link-btn${i > 0 ? " is-secondary" : ""}">${ICONS.external}<span>${lnk.label}</span></a>`
+      )
+      .join("");
+
+    box.innerHTML = `
+      <div class="official-notice-card">
+        <p class="official-notice-text">${toFaDigits(notice.text)}</p>
+        <div class="official-notice-links">${linksHtml}</div>
+      </div>
+      ${
+        notice.withdrawalWarning
+          ? `<div class="alert-callout" role="note">${ICONS.alert}<span>${toFaDigits(notice.withdrawalWarning)}</span></div>`
+          : ""
+      }
+    `;
+  }
+
   function renderChecklist() {
     const listEl = document.getElementById("checklist-list");
     const emptyEl = document.getElementById("checklist-empty");
@@ -211,6 +236,9 @@
     document.getElementById("checklist-progressbar").setAttribute("aria-valuenow", String(percent));
 
     const filtered = DATA.checklist.filter((item) => {
+      if (state.checklistFilter === "core") {
+        return !item.optional;
+      }
       if (state.checklistFilter === "remaining") {
         return !state.checkedDocs.has(item.id);
       }
@@ -220,7 +248,19 @@
     listEl.innerHTML = "";
     emptyEl.classList.toggle("hidden", filtered.length > 0);
 
+    let lastGroup = null;
     filtered.forEach((item) => {
+      if (item.group && item.group !== lastGroup) {
+        lastGroup = item.group;
+        const groupLi = document.createElement("li");
+        groupLi.className = "checklist-group-header";
+        groupLi.innerHTML = `
+          <span>${toFaDigits(item.group)}</span>
+          ${item.optional ? `<span class="checklist-group-optional">در صورت شمول</span>` : ""}
+        `;
+        listEl.appendChild(groupLi);
+      }
+
       const checked = state.checkedDocs.has(item.id);
       const li = document.createElement("li");
       li.className = `checklist-item${checked ? " is-checked" : ""}`;
@@ -775,6 +815,7 @@
   // ==========================================================================
   function init() {
     renderHeaderAndFooter();
+    renderOfficialNotice();
     initChecklistControls();
     renderChecklist();
     renderFacultySelector();

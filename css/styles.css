@@ -633,6 +633,90 @@ input:focus-visible {
   line-height: 1.75;
 }
 
+/* باکس اطلاعیه رسمی و هشدار انصراف بالای چک‌لیست */
+.official-notice-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-block-end: 14px;
+}
+
+.official-notice-card {
+  padding: 14px 16px;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-card);
+  border-inline-start: 4px solid var(--accent);
+  border-radius: var(--radius-card);
+}
+
+.official-notice-text {
+  margin: 0 0 10px;
+  font-size: 0.86rem;
+  color: var(--text-primary);
+  line-height: 1.78;
+}
+
+.official-notice-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.official-link-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 6px 12px;
+  background-color: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  color: #FFFFFF;
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background-color 0.16s var(--ease);
+}
+
+.official-link-btn:hover {
+  background-color: var(--accent-hover);
+}
+
+.official-link-btn.is-secondary {
+  background-color: var(--accent-tint);
+  border-color: #C6DCE2;
+  color: var(--accent);
+}
+
+.official-link-btn.is-secondary:hover {
+  background-color: var(--accent);
+  border-color: var(--accent);
+  color: #FFFFFF;
+}
+
+.checklist-group-header {
+  padding: 10px 16px;
+  background-color: var(--bg-soft);
+  border-block-end: 1px solid var(--border-subtle);
+  font-size: 0.83rem;
+  font-weight: 800;
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.checklist-group-optional {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-card);
+  padding: 1px 8px;
+  border-radius: var(--radius-pill);
+}
+
 .checklist-link {
   display: inline-flex;
   align-items: center;
