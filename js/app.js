@@ -415,17 +415,44 @@
     return li;
   }
 
+  function getConditionDocCount(condId) {
+    return DATA.checklist.filter((item) => {
+      if (item.condition !== condId) return false;
+      const isExcluded = item.excludeWhen && item.excludeWhen.some((c) => state.activeConditions.has(c));
+      return !isExcluded;
+    }).length;
+  }
+
   function renderChecklistConditions() {
     const box = document.getElementById("checklist-conditions-box");
     if (!box || !DATA.checklistConditions || !DATA.checklistConditions.length) return;
 
     box.innerHTML = `
-      <div class="conditions-label">اگر مشمول هرکدام از موارد زیر هستید انتخاب کنید تا به چک‌لیست و نوار پیشرفت شما اضافه شود (امکان چند انتخاب):</div>
-      <div class="conditions-chips" role="group" aria-label="انتخاب شرایط خاص چک‌لیست">
+      <div class="conditions-header">
+        <div class="conditions-label">۱. شرایط خود را انتخاب کنید (امکان انتخاب چند گزینه همزمان):</div>
+        <p class="conditions-subtitle">مدارک الزامی پایه به صورت خودکار برای همه فعال است. اگر هر یک از شرایط زیر را دارید، رویش کلیک کنید تا مدارکش به چک‌لیست شما اضافه شود:</p>
+      </div>
+      <div class="mandatory-lock-badge">
+        ${ICONS.check}
+        <span>مدارک پایه برای همه فعال است</span>
+      </div>
+      <div class="conditions-chips" role="group" aria-label="انتخاب شرایط پذیرش من">
         ${DATA.checklistConditions
           .map((cond) => {
             const selected = state.activeConditions.has(cond.id);
-            return `<button type="button" class="condition-chip${selected ? " is-selected" : ""}" data-condition-id="${cond.id}" aria-pressed="${selected}">${selected ? ICONS.check : ICONS.plus}<span>${toFaDigits(cond.label)}</span></button>`;
+            const count = getConditionDocCount(cond.id);
+            return `
+              <button type="button" class="condition-chip${selected ? " is-selected" : ""}" data-condition-id="${cond.id}" aria-pressed="${selected}">
+                <span class="condition-chip-main">
+                  ${selected ? ICONS.check : ICONS.plus}
+                  <span>
+                    <span class="condition-chip-title">${toFaDigits(cond.label)}</span>
+                    ${cond.hint ? `<span class="condition-chip-hint">${toFaDigits(cond.hint)}</span>` : ""}
+                  </span>
+                </span>
+                <span class="condition-chip-count">+${toFaDigits(count)} مدرک</span>
+              </button>
+            `;
           })
           .join("")}
       </div>
@@ -450,40 +477,54 @@
     const listEl = document.getElementById("checklist-list");
     const emptyEl = document.getElementById("checklist-empty");
 
-    // فقط مدارک عمومی + شرایط انتخاب‌شده توسط کاربر در چک‌لیست و نوار پیشرفت محاسبه می‌شوند
-    const activeItems = DATA.checklist.filter(
-      (item) => !item.condition || state.activeConditions.has(item.condition)
-    );
+    // ۱. فقط آیتم‌هایی که مربوط به شرایط انتخاب‌شده همین کاربر هستند (با اعمال excludeWhen):
+    const applicableItems = DATA.checklist.filter((item) => {
+      const isExcluded = item.excludeWhen && item.excludeWhen.some((c) => state.activeConditions.has(c));
+      if (isExcluded) return false;
+      return item.condition === "mandatory" || state.activeConditions.has(item.condition);
+    });
 
-    const total = activeItems.length;
-    const completed = activeItems.filter((item) => state.checkedDocs.has(item.id)).length;
-    const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
+    // ۲. تعداد تیک‌خورده‌ها دقیقاً اشتراک (Intersection) با applicableItems است:
+    const applicableTotalCount = applicableItems.length;
+    const applicableCompletedCount = applicableItems.filter((item) =>
+      state.checkedDocs.has(item.id)
+    ).length;
+    const progressPercent =
+      applicableTotalCount === 0
+        ? 0
+        : Math.round((applicableCompletedCount / applicableTotalCount) * 100);
 
     document.getElementById("checklist-progress-text").textContent =
-      `${toFaDigits(completed)} از ${toFaDigits(total)} مورد آماده شده`;
-    document.getElementById("checklist-progress-percent").textContent = `${toFaDigits(percent)}٪`;
-    document.getElementById("checklist-progress-fill").style.width = `${percent}%`;
-    document.getElementById("checklist-progressbar").setAttribute("aria-valuenow", String(percent));
+      `${toFaDigits(applicableCompletedCount)} از ${toFaDigits(applicableTotalCount)} مورد آماده شده`;
+    document.getElementById("checklist-progress-percent").textContent = `${toFaDigits(progressPercent)}٪`;
+    document.getElementById("checklist-progress-fill").style.width = `${progressPercent}%`;
+    document.getElementById("checklist-progressbar").setAttribute("aria-valuenow", String(progressPercent));
 
-    const filtered = activeItems.filter((item) => {
-      if (state.checklistFilter === "remaining") {
-        return !state.checkedDocs.has(item.id);
-      }
+    // ۳. لایه دوم — فیلتر نمایش (همه / باقیمانده / آماده‌شده) فقط روی displayedItems اعمال می‌شود:
+    const displayedItems = applicableItems.filter((item) => {
+      if (state.checklistFilter === "remaining") return !state.checkedDocs.has(item.id);
+      if (state.checklistFilter === "completed") return state.checkedDocs.has(item.id);
       return true;
     });
 
     listEl.innerHTML = "";
-    emptyEl.classList.toggle("hidden", filtered.length > 0);
+    emptyEl.classList.toggle("hidden", displayedItems.length > 0);
+    if (displayedItems.length === 0) {
+      emptyEl.textContent =
+        state.checklistFilter === "completed"
+          ? "هنوز موردی را تیک نزده‌اید."
+          : "همه موارد چک‌لیست شما آماده شده‌اند.";
+    }
 
     let lastGroup = null;
-    filtered.forEach((item) => {
+    displayedItems.forEach((item) => {
       if (item.group && item.group !== lastGroup) {
         lastGroup = item.group;
         const groupLi = document.createElement("li");
         groupLi.className = "checklist-group-header";
         groupLi.innerHTML = `
           <span>${toFaDigits(item.group)}</span>
-          ${item.condition ? `<span class="checklist-group-optional">انتخاب‌شده توسط شما</span>` : ""}
+          ${item.condition !== "mandatory" ? `<span class="checklist-group-optional">انتخاب‌شده توسط شما</span>` : ""}
         `;
         listEl.appendChild(groupLi);
       }
