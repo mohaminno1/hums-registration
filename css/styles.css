@@ -1702,7 +1702,7 @@ input:focus-visible {
    ۷. استایل‌های افزوده‌شده: برندینگ، تایملاین، جدول شهریه، برنامه دانشکده و فوتر
    ========================================================================== */
 
-/* --- هدر و بج کارگروه آموزشی شورای صنفی --- */
+/* --- هدر و بج شورای صنفی --- */
 .header-top {
   align-items: flex-start;
 }
@@ -2499,6 +2499,305 @@ input:focus-visible {
   align-items: center;
   justify-content: space-between;
   gap: 10px;
+}
+
+/* ==========================================================================
+   ۸. چک‌لیست هوشمند (پروفایل چندانتخابی)، پیام تبریک ۱۰۰٪ و نشانی‌های تکمیلی
+   ========================================================================== */
+
+.profile-builder {
+  padding: 16px;
+  background: linear-gradient(180deg, #F8F5EE 0%, #FFFFFF 100%);
+  border-block-end: 1px solid var(--border-card);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.profile-builder-head {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.profile-builder-title {
+  margin: 0;
+  font-size: 0.94rem;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.profile-builder-subtitle {
+  margin: 0;
+  font-size: 0.83rem;
+  color: var(--text-secondary);
+  line-height: 1.72;
+}
+
+.profile-mandatory-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.profile-mandatory-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 12px;
+  background-color: var(--status-confirmed-bg);
+  color: var(--status-confirmed-fg);
+  border: 1px solid #B7DEC9;
+  border-radius: var(--radius-pill);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.profile-mandatory-count {
+  padding: 1px 8px;
+  background-color: #FFFFFF;
+  border-radius: var(--radius-pill);
+  font-size: 0.74rem;
+  font-weight: 800;
+  color: var(--status-confirmed-fg);
+}
+
+.profile-chips-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+@media (min-width: 560px) {
+  .profile-chips-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.profile-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  width: 100%;
+  min-height: var(--tap-min);
+  padding: 10px 12px;
+  background-color: var(--bg-card);
+  border: 1.5px solid var(--border-card);
+  border-radius: var(--radius-sm);
+  text-align: start;
+  cursor: pointer;
+  transition: background-color 0.16s var(--ease), border-color 0.16s var(--ease), box-shadow 0.16s var(--ease);
+}
+
+.profile-chip:hover {
+  border-color: var(--accent);
+  background-color: #FAFCFD;
+}
+
+.profile-chip.is-active {
+  background-color: var(--accent-tint);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px rgba(15, 76, 92, 0.14);
+}
+
+.profile-chip-top {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.profile-chip-status-icon {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background-color: var(--bg-soft);
+  color: var(--text-secondary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background-color 0.16s var(--ease), color 0.16s var(--ease);
+}
+
+.profile-chip.is-active .profile-chip-status-icon {
+  background-color: var(--accent);
+  color: #FFFFFF;
+}
+
+.profile-chip-label {
+  flex: 1;
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.45;
+}
+
+.profile-chip.is-active .profile-chip-label {
+  color: var(--accent);
+}
+
+.profile-chip-count {
+  flex-shrink: 0;
+  padding: 2px 8px;
+  background-color: var(--bg-soft);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-pill);
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.profile-chip.is-active .profile-chip-count {
+  background-color: var(--accent);
+  border-color: var(--accent);
+  color: #FFFFFF;
+}
+
+.profile-chip-hint {
+  padding-inline-start: 29px;
+  font-size: 0.76rem;
+  color: var(--text-secondary);
+  line-height: 1.55;
+}
+
+/* نوار پیشرفت سبز درخشان و پیام تبریک ۱۰۰٪ */
+.progress-block.is-complete .progress-percent {
+  color: #15803D;
+}
+
+.progress-block.is-complete .progress-fill {
+  background: linear-gradient(90deg, #16A34A 0%, #22C55E 100%);
+  box-shadow: 0 0 10px rgba(34, 197, 94, 0.4);
+}
+
+.progress-celebration {
+  margin-block-start: 10px;
+  padding: 10px 14px;
+  background-color: #ECFDF3;
+  border: 1px solid #86EFAC;
+  border-inline-start: 4px solid #16A34A;
+  border-radius: var(--radius-sm);
+  color: #14532D;
+  font-size: 0.86rem;
+  font-weight: 800;
+  line-height: 1.65;
+}
+
+.checklist-group-core {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--status-confirmed-fg);
+  background-color: var(--status-confirmed-bg);
+  border: 1px solid #C3E3D1;
+  padding: 1px 8px;
+  border-radius: var(--radius-pill);
+}
+
+/* نکته مشترک دانشکده‌ها و هشدار محل ثبت‌نام */
+.faculty-common-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 12px;
+  margin-block-end: 12px;
+  background-color: var(--bg-soft);
+  border: 1px solid var(--border-subtle);
+  border-inline-start: 3px solid var(--accent);
+  border-radius: 6px;
+  font-size: 0.82rem;
+  color: var(--text-primary);
+  line-height: 1.72;
+}
+
+.faculty-common-note .icon {
+  margin-block-start: 3px;
+  color: var(--accent);
+}
+
+.faculty-alert-tag {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 11px;
+  background-color: var(--alert-bg);
+  color: var(--alert);
+  border: 1px solid #EBC0B8;
+  border-radius: var(--radius-pill);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+/* نشانی‌های تکمیلی و اطلاعات تماس */
+.extra-addresses-block {
+  margin-block-end: 26px;
+}
+
+.extra-addresses-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+@media (min-width: 560px) {
+  .extra-addresses-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.extra-address-card {
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.extra-address-title {
+  margin: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  font-size: 0.92rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  line-height: 1.55;
+}
+
+.extra-address-title .icon {
+  margin-block-start: 3px;
+  color: var(--accent);
+}
+
+.extra-address-text {
+  margin: 0;
+  font-size: 0.84rem;
+  color: var(--text-secondary);
+  line-height: 1.75;
+}
+
+.extra-address-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
+  padding-block-start: 6px;
+  border-block-start: 1px solid var(--border-subtle);
+}
+
+.extra-meta-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  background-color: var(--bg-soft);
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-pill);
+  font-size: 0.77rem;
+  color: var(--text-secondary);
 }
 
 /* ==========================================================================

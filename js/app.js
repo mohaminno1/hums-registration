@@ -13,6 +13,7 @@
 
   const STORAGE_KEYS = {
     checklist: `reg_guide_${DATA.storageVersion}_checklist`,
+    conditions: `reg_guide_${DATA.storageVersion}_conditions`,
     steps: `reg_guide_${DATA.storageVersion}_steps`,
     faculty: `reg_guide_${DATA.storageVersion}_faculty`
   };
@@ -64,6 +65,12 @@
     }
   }
 
+  function loadStoredConditions() {
+    const validIds = new Set((DATA.checklistConditions || []).map((c) => c.id));
+    const saved = loadStoredSet(STORAGE_KEYS.conditions);
+    return new Set(Array.from(saved).filter((id) => validIds.has(id)));
+  }
+
   function loadStoredFaculty() {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.faculty);
@@ -79,9 +86,10 @@
   // وضعیت برنامه
   const state = {
     checkedDocs: loadStoredSet(STORAGE_KEYS.checklist),
+    selectedConditions: loadStoredConditions(),
     doneSteps: loadStoredSet(STORAGE_KEYS.steps),
     selectedFacultyId: loadStoredFaculty(),
-    checklistFilter: "all",
+    statusFilter: "all",
     tuitionTableOpen: false,
     faqQuery: "",
     zoom: 1
@@ -92,11 +100,14 @@
     alert: `<svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>`,
     info: `<svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>`,
     mapPin: `<svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>`,
-    check: `<svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>`,
+    check: `<svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>`,
+    plus: `<svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>`,
+    lock: `<svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>`,
     copy: `<svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`,
     external: `<svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>`,
     chevron: `<svg class="icon faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>`,
     phone: `<svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>`,
+    mail: `<svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>`,
     calendar: `<svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>`,
     userCheck: `<svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><polyline points="17 11 19 13 23 9"></polyline></svg>`,
     key: `<svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"></path></svg>`,
@@ -279,7 +290,7 @@
   }
 
   // ==========================================================================
-  // ۳. بخش اول: چک‌لیست تعاملی مدارک + جدول شهریه و سفته
+  // ۳. بخش اول: چک‌لیست هوشمند (پروفایل چندانتخابی + Progress Bar دقیق)
   // ==========================================================================
   function renderOfficialNotice() {
     const box = document.getElementById("official-notice-box");
@@ -412,41 +423,156 @@
     return li;
   }
 
+  function getConditionAddedCount(condId) {
+    const selected = Array.from(state.selectedConditions);
+    return DATA.checklist.filter((item) => {
+      if (item.condition !== condId) return false;
+      const isExcluded = (item.excludeWhen || []).some((c) => selected.includes(c));
+      return !isExcluded;
+    }).length;
+  }
+
+  function getMandatoryActiveCount() {
+    const selected = Array.from(state.selectedConditions);
+    return DATA.checklist.filter((item) => {
+      if (item.condition !== "mandatory") return false;
+      const isExcluded = (item.excludeWhen || []).some((c) => selected.includes(c));
+      return !isExcluded;
+    }).length;
+  }
+
+  function renderProfileBuilder() {
+    const container = document.getElementById("checklist-profile-builder");
+    if (!container || !DATA.checklistConditions) return;
+
+    const mandatoryCount = getMandatoryActiveCount();
+
+    const chipsHtml = DATA.checklistConditions
+      .map((cond) => {
+        const isActive = state.selectedConditions.has(cond.id);
+        const count = getConditionAddedCount(cond.id);
+        return `
+          <button
+            type="button"
+            class="profile-chip${isActive ? " is-active" : ""}"
+            data-condition-id="${cond.id}"
+            aria-pressed="${isActive}"
+          >
+            <span class="profile-chip-top">
+              <span class="profile-chip-status-icon">${isActive ? ICONS.check : ICONS.plus}</span>
+              <span class="profile-chip-label">${toFaDigits(cond.label)}</span>
+              <span class="profile-chip-count">+${toFaDigits(count)} مدرک</span>
+            </span>
+            ${cond.hint ? `<span class="profile-chip-hint">${toFaDigits(cond.hint)}</span>` : ""}
+          </button>
+        `;
+      })
+      .join("");
+
+    container.innerHTML = `
+      <div class="profile-builder-head">
+        <h3 class="profile-builder-title">۱. شرایط خود را انتخاب کنید (امکان انتخاب چند گزینه همزمان):</h3>
+        <p class="profile-builder-subtitle">
+          مدارک الزامی پایه به صورت خودکار برای همه فعال است. اگر هر یک از شرایط زیر را دارید، رویش کلیک کنید تا مدارکش به چک‌لیست شما اضافه شود:
+        </p>
+      </div>
+
+      <div class="profile-mandatory-row">
+        <span class="profile-mandatory-badge">
+          ${ICONS.lock}
+          <span>مدارک پایه برای همه فعال است</span>
+          <span class="profile-mandatory-count">${toFaDigits(mandatoryCount)} مدرک</span>
+        </span>
+      </div>
+
+      <div class="profile-chips-grid" role="group" aria-label="شرایط پذیرش من">
+        ${chipsHtml}
+      </div>
+    `;
+
+    container.querySelectorAll("[data-condition-id]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const condId = btn.dataset.conditionId;
+        if (state.selectedConditions.has(condId)) {
+          state.selectedConditions.delete(condId);
+        } else {
+          state.selectedConditions.add(condId);
+        }
+        saveStoredSet(STORAGE_KEYS.conditions, state.selectedConditions);
+        renderProfileBuilder();
+        renderChecklist();
+      });
+    });
+  }
+
   function renderChecklist() {
     const listEl = document.getElementById("checklist-list");
     const emptyEl = document.getElementById("checklist-empty");
-    const total = DATA.checklist.length;
-    const completed = DATA.checklist.filter((item) => state.checkedDocs.has(item.id)).length;
-    const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
+    const progressBlock = document.getElementById("checklist-progress-block");
+    const celebrationEl = document.getElementById("checklist-celebration");
 
+    const selectedConditions = Array.from(state.selectedConditions);
+
+    // ۱. فقط آیتم‌هایی که مربوط به شرایط انتخاب‌شده همین کاربر هستند:
+    const applicableItems = DATA.checklist.filter((item) => {
+      const isExcluded = (item.excludeWhen || []).some((cond) => selectedConditions.includes(cond));
+      if (isExcluded) return false;
+      return item.condition === "mandatory" || selectedConditions.includes(item.condition);
+    });
+
+    // ۲. تعداد تیک‌خورده‌ها حتماً باید اشتراک (Intersection) با applicableItems باشد:
+    const applicableCompletedCount = applicableItems.filter((item) =>
+      state.checkedDocs.has(item.id)
+    ).length;
+
+    const applicableTotalCount = applicableItems.length;
+    const progressPercent =
+      applicableTotalCount === 0
+        ? 0
+        : Math.round((applicableCompletedCount / applicableTotalCount) * 100);
+
+    // به‌روزرسانی نوار پیشرفت و پیام تبریک ۱۰۰٪
     document.getElementById("checklist-progress-text").textContent =
-      `${toFaDigits(completed)} از ${toFaDigits(total)} مورد آماده شده`;
-    document.getElementById("checklist-progress-percent").textContent = `${toFaDigits(percent)}٪`;
-    document.getElementById("checklist-progress-fill").style.width = `${percent}%`;
-    document.getElementById("checklist-progressbar").setAttribute("aria-valuenow", String(percent));
+      `${toFaDigits(applicableCompletedCount)} از ${toFaDigits(applicableTotalCount)} مدرک مربوط به شما آماده است (${toFaDigits(progressPercent)}٪)`;
+    document.getElementById("checklist-progress-percent").textContent = `${toFaDigits(progressPercent)}٪`;
+    document.getElementById("checklist-progress-fill").style.width = `${progressPercent}%`;
+    document.getElementById("checklist-progressbar").setAttribute("aria-valuenow", String(progressPercent));
 
-    const filtered = DATA.checklist.filter((item) => {
-      if (state.checklistFilter === "core") {
-        return !item.optional;
-      }
-      if (state.checklistFilter === "remaining") {
-        return !state.checkedDocs.has(item.id);
-      }
+    const isComplete = applicableTotalCount > 0 && progressPercent === 100;
+    if (progressBlock) progressBlock.classList.toggle("is-complete", isComplete);
+    if (celebrationEl) celebrationEl.classList.toggle("hidden", !isComplete);
+
+    // ۳. فیلتر نمایش (همه / باقیمانده / آماده‌شده) فقط روی displayedItems اعمال می‌شود، نه روی Progress Bar!
+    const displayedItems = applicableItems.filter((item) => {
+      if (state.statusFilter === "remaining") return !state.checkedDocs.has(item.id);
+      if (state.statusFilter === "completed") return state.checkedDocs.has(item.id);
       return true;
     });
 
     listEl.innerHTML = "";
-    emptyEl.classList.toggle("hidden", filtered.length > 0);
+    if (displayedItems.length === 0) {
+      if (state.statusFilter === "remaining") {
+        emptyEl.textContent = "عالیه! هیچ مدرک باقیمانده‌ای ندارید 🎉";
+      } else if (state.statusFilter === "completed") {
+        emptyEl.textContent = "هنوز هیچ مدرکی را به عنوان آماده‌شده تیک نزده‌اید.";
+      } else {
+        emptyEl.textContent = "موردی برای نمایش وجود ندارد.";
+      }
+      emptyEl.classList.remove("hidden");
+    } else {
+      emptyEl.classList.add("hidden");
+    }
 
     let lastGroup = null;
-    filtered.forEach((item) => {
+    displayedItems.forEach((item) => {
       if (item.group && item.group !== lastGroup) {
         lastGroup = item.group;
         const groupLi = document.createElement("li");
         groupLi.className = "checklist-group-header";
+        const isExtraGroup = item.condition !== "mandatory";
         groupLi.innerHTML = `
           <span>${toFaDigits(item.group)}</span>
-          ${item.optional ? `<span class="checklist-group-optional">در صورت شمول</span>` : ""}
+          ${isExtraGroup ? `<span class="checklist-group-optional">بر اساس شرایط انتخابی شما</span>` : `<span class="checklist-group-core">الزامی پایه</span>`}
         `;
         listEl.appendChild(groupLi);
       }
@@ -550,21 +676,26 @@
     const filterButtons = document.querySelectorAll("[data-checklist-filter]");
     filterButtons.forEach((btn) => {
       btn.addEventListener("click", () => {
-        state.checklistFilter = btn.dataset.checklistFilter;
+        state.statusFilter = btn.dataset.checklistFilter;
         filterButtons.forEach((b) => b.classList.toggle("is-active", b === btn));
         renderChecklist();
       });
     });
 
     document.getElementById("checklist-reset-btn").addEventListener("click", () => {
-      if (state.checkedDocs.size === 0) {
-        showToast("چک‌لیست همین الان خالی است.");
+      if (state.checkedDocs.size === 0 && state.selectedConditions.size === 0 && state.statusFilter === "all") {
+        showToast("چک‌لیست همین الان در حالت پیش‌فرض است.");
         return;
       }
       state.checkedDocs.clear();
+      state.selectedConditions.clear();
+      state.statusFilter = "all";
+      filterButtons.forEach((b) => b.classList.toggle("is-active", b.dataset.checklistFilter === "all"));
       saveStoredSet(STORAGE_KEYS.checklist, state.checkedDocs);
+      saveStoredSet(STORAGE_KEYS.conditions, state.selectedConditions);
+      renderProfileBuilder();
       renderChecklist();
-      showToast("تیک‌های چک‌لیست پاک شد.");
+      showToast("تیک‌ها و شرایط انتخاب‌شده بازنشانی شد.");
     });
   }
 
@@ -619,7 +750,12 @@
       .join("");
 
     box.innerHTML = `
-      <div class="faculty-selector-label">رشته / دانشکده قبولی خود را انتخاب کنید تا روز، تاریخ و محل دقیق ثبت‌نام حضوری نمایش داده شود:</div>
+      ${
+        DATA.facultyCommonNote
+          ? `<div class="faculty-common-note" role="note">${ICONS.info}<span>${toFaDigits(DATA.facultyCommonNote)}</span></div>`
+          : ""
+      }
+      <div class="faculty-selector-label">رشته / دانشکده قبولی خود را انتخاب کنید تا روز، تاریخ و نشانی دقیق ثبت‌نام حضوری نمایش داده شود:</div>
       <div class="faculty-chips-row" role="group" aria-label="انتخاب دانشکده">
         ${DATA.faculties
           .map(
@@ -631,10 +767,15 @@
 
       <div class="faculty-details-panel">
         <div class="faculty-details-top">
+          ${
+            active.venueAlertTag
+              ? `<span class="faculty-alert-tag">${ICONS.alert}<span>${toFaDigits(active.venueAlertTag)}</span></span>`
+              : ""
+          }
           <div class="faculty-venue-note${active.venueWarning ? " is-warning" : ""}">
             ${active.venueWarning ? ICONS.alert : ICONS.mapPin}
             <div>
-              <strong>${active.label}:</strong> ${toFaDigits(active.venueNote)}
+              <strong>نشانی دقیق محل ثبت‌نام (${active.label}):</strong> ${toFaDigits(active.venueNote)}
             </div>
           </div>
           ${
@@ -758,7 +899,7 @@
   }
 
   // ==========================================================================
-  // ۵. بخش سوم: نقشه دانشگاه (Lightbox + Zoom/Pan) و کانال‌ها
+  // ۵. بخش سوم: نقشه دانشگاه (Lightbox + Zoom/Pan)، نشانی‌های تکمیلی و کانال‌ها
   // ==========================================================================
   function renderPinsLayer(containerEl, isLightbox) {
     if (!containerEl) return;
@@ -850,6 +991,46 @@
 
       legendList.appendChild(li);
     });
+  }
+
+  function renderExtraAddresses() {
+    const container = document.getElementById("campus-extra-addresses");
+    if (!container || !DATA.extraAddresses || !DATA.extraAddresses.length) return;
+
+    const cardsHtml = DATA.extraAddresses
+      .map((item) => {
+        const metaChips = [];
+        if (item.postalCode) {
+          metaChips.push(`<span class="extra-meta-pill">کدپستی: <strong dir="ltr">${toFaDigits(item.postalCode)}</strong></span>`);
+        }
+        if (item.phone) {
+          metaChips.push(
+            `<a href="${item.phone.href}" class="phone-link-chip" dir="ltr">${ICONS.phone}<span>${item.phone.display}</span></a>`
+          );
+        }
+        if (item.email) {
+          metaChips.push(
+            `<a href="mailto:${item.email}" class="phone-link-chip" dir="ltr">${ICONS.mail}<span>${item.email}</span></a>`
+          );
+        }
+
+        return `
+          <article class="card extra-address-card">
+            <h4 class="extra-address-title">${ICONS.mapPin}<span>${toFaDigits(item.title)}</span></h4>
+            <p class="extra-address-text">${toFaDigits(item.address)}</p>
+            ${metaChips.length ? `<div class="extra-address-meta">${metaChips.join("")}</div>` : ""}
+          </article>
+        `;
+      })
+      .join("");
+
+    container.innerHTML = `
+      <div class="subsection-header">
+        <h3 class="subsection-title">نشانی‌های تکمیلی و اطلاعات تماس</h3>
+        <p class="subsection-desc">نشانی مراکز اداری و حقوقی خارج از پردیس برای پیگیری امور ثبت‌نام و ایثارگران.</p>
+      </div>
+      <div class="extra-addresses-grid">${cardsHtml}</div>
+    `;
   }
 
   function initLightbox() {
@@ -1121,11 +1302,13 @@
     renderHeaderAndFooter();
     renderTimeline();
     renderOfficialNotice();
+    renderProfileBuilder();
     initChecklistControls();
     renderChecklist();
     renderFacultySelector();
     renderStepper();
     renderMapAndLegend();
+    renderExtraAddresses();
     initLightbox();
     renderAssociations();
     renderStatusBoard();
