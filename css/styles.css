@@ -1,10 +1,10 @@
 /* ==========================================================================
-   تایپوگرافی: فونت Self-Hosted (در صورت وجود) + Google Fonts Vazirmatn
+   تایپوگرافی: فونت Self-Hosted (Vazirmatn RD) + Google Fonts Vazirmatn
    ========================================================================== */
 @font-face {
-  font-family: "Vazirmatn FD";
-  src: url("../fonts/Vazirmatn-FD[wght].woff2") format("woff2-variations"),
-       url("../fonts/Vazirmatn-FD[wght].woff2") format("woff2");
+  font-family: "Vazirmatn RD";
+  src: url("../fonts/Vazirmatn-RD[wght].woff2") format("woff2-variations"),
+       url("../fonts/Vazirmatn-RD[wght].woff2") format("woff2");
   font-weight: 100 900;
   font-style: normal;
   font-display: swap;
@@ -41,7 +41,7 @@
   --radius-sm: 7px;
   --radius-pill: 999px;
 
-  --font-sans: "Vazirmatn FD", "Vazirmatn", system-ui, -apple-system, "Segoe UI", Tahoma, sans-serif;
+  --font-sans: "Vazirmatn RD", "Vazirmatn", system-ui, -apple-system, "Segoe UI", Tahoma, sans-serif;
   --max-width: 780px;
   --tap-min: 44px;
   --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
@@ -2801,6 +2801,783 @@ input:focus-visible {
 }
 
 /* ==========================================================================
+   ۹. ارتقای تجربه کاربری موبایل: مسیر اختصاصی من، نوار پایین، چک‌لیست جمع‌شونده و نقشه تعاملی
+   ========================================================================== */
+
+/* جلوگیری از زوم خودکار iOS Safari در فیلدهای ورودی */
+input,
+select,
+textarea {
+  font-size: 16px;
+}
+
+.search-input {
+  font-size: 16px;
+}
+
+/* غیرفعال کردن افکت نویز سنگین در موبایل برای اسکرول ۶۰ فریم */
+@media (max-width: 767px) {
+  .paper-grain {
+    display: none !important;
+  }
+
+  .sticky-jump-nav {
+    display: none !important;
+  }
+
+  .page-shell {
+    padding-block-end: calc(96px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .content-section {
+    scroll-margin-top: 16px;
+  }
+
+  .toast {
+    inset-block-end: calc(82px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+/* --- ۱. کارت «مسیر اختصاصی من» --- */
+.my-path-section {
+  padding-block-start: 18px;
+}
+
+.my-path-card {
+  padding: 16px;
+  border: 1.5px solid #C6DCE2;
+  background: linear-gradient(180deg, #F5FAFB 0%, #FFFFFF 34%);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.mypath-title-wrap {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.mypath-icon-badge {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background-color: var(--accent);
+  color: #FFFFFF;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-block-start: 2px;
+}
+
+.mypath-title {
+  margin: 0 0 2px;
+  font-size: clamp(1.02rem, 3.4vw, 1.16rem);
+  font-weight: 800;
+  color: var(--text-primary);
+  line-height: 1.45;
+}
+
+.mypath-subtitle {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  line-height: 1.65;
+}
+
+.mypath-field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.mypath-field-label {
+  font-size: 0.83rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.mypath-select-wrap {
+  position: relative;
+}
+
+.mypath-select {
+  width: 100%;
+  min-height: 48px;
+  padding: 10px 14px;
+  background-color: var(--bg-card);
+  border: 1.5px solid var(--border-card);
+  border-radius: var(--radius-sm);
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: border-color 0.16s var(--ease), box-shadow 0.16s var(--ease);
+}
+
+.mypath-select:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(15, 76, 92, 0.12);
+}
+
+.mypath-cond-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.mypath-cond-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 38px;
+  padding: 5px 11px;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-pill);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background-color 0.16s var(--ease), border-color 0.16s var(--ease), color 0.16s var(--ease);
+}
+
+.mypath-cond-chip:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.mypath-cond-chip.is-active {
+  background-color: var(--accent);
+  border-color: var(--accent);
+  color: #FFFFFF;
+}
+
+.mypath-placeholder {
+  padding: 12px 14px;
+  background-color: var(--bg-soft);
+  border: 1px dashed var(--border-card);
+  border-radius: var(--radius-sm);
+  font-size: 0.83rem;
+  color: var(--text-secondary);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  line-height: 1.7;
+}
+
+.mypath-result {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-block-start: 4px;
+}
+
+.mypath-warning-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 11px 13px;
+  background-color: var(--alert-bg);
+  border: 1px solid #EBC0B8;
+  border-inline-start: 4px solid var(--alert);
+  border-radius: var(--radius-sm);
+  color: var(--alert);
+  font-size: 0.84rem;
+  font-weight: 700;
+  line-height: 1.72;
+}
+
+.mypath-warning-banner .icon {
+  margin-block-start: 3px;
+  color: var(--alert);
+}
+
+.mypath-result-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+@media (min-width: 560px) {
+  .mypath-result-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.mypath-result-item {
+  padding: 12px 13px;
+  background-color: var(--bg-soft);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.mypath-result-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.77rem;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.mypath-result-value {
+  font-size: 0.96rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  line-height: 1.5;
+}
+
+.mypath-result-sub {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  line-height: 1.65;
+}
+
+.mypath-footer-row {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-block-start: 10px;
+  border-block-start: 1px solid var(--border-subtle);
+}
+
+@media (min-width: 600px) {
+  .mypath-footer-row {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+}
+
+.mypath-progress-pill {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 11px;
+  background-color: var(--accent-tint);
+  color: var(--accent);
+  border: 1px solid #C6DCE2;
+  border-radius: var(--radius-pill);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.mypath-progress-pill.is-complete {
+  background-color: #ECFDF3;
+  border-color: #86EFAC;
+  color: #15803D;
+}
+
+.mypath-cta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.mypath-btn-primary,
+.mypath-btn-secondary {
+  flex: 1 1 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: var(--tap-min);
+  padding-inline: 14px;
+  border-radius: var(--radius-sm);
+  font-size: 0.83rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.16s var(--ease), color 0.16s var(--ease), border-color 0.16s var(--ease);
+}
+
+.mypath-btn-primary {
+  background-color: var(--accent);
+  border: 1px solid var(--accent);
+  color: #FFFFFF;
+}
+
+.mypath-btn-primary:hover {
+  background-color: var(--accent-hover);
+}
+
+.mypath-btn-secondary {
+  background-color: var(--bg-card);
+  border: 1px solid var(--accent);
+  color: var(--accent);
+}
+
+.mypath-btn-secondary:hover {
+  background-color: var(--accent-tint);
+}
+
+/* --- ۲. نوار ناوبری پایین صفحه اختصاصی موبایل (Mobile Bottom Tab Bar) --- */
+.mobile-bottom-nav {
+  position: fixed;
+  inset-block-end: 0;
+  inset-inline: 0;
+  z-index: 90;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  align-items: stretch;
+  background-color: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-block-start: 1px solid var(--border-card);
+  padding-block-start: 6px;
+  padding-block-end: calc(6px + env(safe-area-inset-bottom, 0px));
+  box-shadow: 0 -2px 12px rgba(30, 36, 43, 0.06);
+}
+
+@media (min-width: 768px) {
+  .mobile-bottom-nav {
+    display: none;
+  }
+}
+
+.bottom-tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  min-height: 50px;
+  padding: 4px 2px;
+  text-decoration: none;
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1.25;
+  transition: color 0.15s var(--ease);
+}
+
+.bottom-tab .icon {
+  width: 20px;
+  height: 20px;
+}
+
+.bottom-tab.is-active {
+  color: var(--accent);
+}
+
+.bottom-tab-icon-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.bottom-tab-badge {
+  position: absolute;
+  inset-block-start: -5px;
+  inset-inline-end: -9px;
+  min-width: 17px;
+  height: 17px;
+  padding-inline: 4px;
+  border-radius: var(--radius-pill);
+  background-color: var(--alert);
+  color: #FFFFFF;
+  font-size: 0.65rem;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+/* --- ۳. چک‌لیست جمع‌شونده (Progressive Disclosure) + تاییدیه بازنشانی --- */
+.checklist-utility-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+
+#checklist-toggle-all-btn.is-all-open .icon {
+  transform: rotate(180deg);
+}
+
+.reset-confirm-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 13px;
+  background-color: var(--alert-bg);
+  border: 1px solid #EBC0B8;
+  border-radius: var(--radius-sm);
+}
+
+.reset-confirm-text {
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: var(--alert);
+}
+
+.reset-confirm-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-danger-sm,
+.btn-neutral-sm {
+  min-height: 36px;
+  padding-inline: 12px;
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.15s var(--ease), border-color 0.15s var(--ease);
+}
+
+.btn-danger-sm {
+  background-color: var(--alert);
+  border: 1px solid var(--alert);
+  color: #FFFFFF;
+}
+
+.btn-danger-sm:hover {
+  background-color: #933426;
+}
+
+.btn-neutral-sm {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-card);
+  color: var(--text-primary);
+}
+
+.btn-neutral-sm:hover {
+  border-color: var(--text-secondary);
+}
+
+.checklist-row-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 11px 14px;
+}
+
+.checklist-check-area {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  cursor: pointer;
+  min-height: 36px;
+}
+
+.checklist-title-wrap {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  padding-block-start: 1px;
+}
+
+.checklist-item.is-checked .checklist-row-head {
+  opacity: 0.72;
+}
+
+.checklist-detail-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 36px;
+  padding: 4px 10px;
+  background-color: var(--bg-soft);
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-pill);
+  color: var(--accent);
+  font-size: 0.77rem;
+  font-weight: 700;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background-color 0.15s var(--ease), border-color 0.15s var(--ease);
+}
+
+.checklist-detail-toggle:hover {
+  border-color: var(--accent);
+  background-color: var(--accent-tint);
+}
+
+.checklist-detail-toggle .faq-chevron {
+  width: 14px;
+  height: 14px;
+  color: var(--accent);
+}
+
+.checklist-item.is-expanded .checklist-detail-toggle {
+  background-color: var(--accent-tint);
+  border-color: var(--accent);
+}
+
+.checklist-item.is-expanded .checklist-detail-toggle .faq-chevron {
+  transform: rotate(180deg);
+}
+
+.checklist-details-panel {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.22s var(--ease);
+}
+
+.checklist-item.is-expanded .checklist-details-panel {
+  grid-template-rows: 1fr;
+}
+
+.checklist-details-inner {
+  overflow: hidden;
+}
+
+.checklist-details-body {
+  padding: 0 14px 14px;
+  padding-inline-start: 47px;
+}
+
+.checklist-tuition-inline {
+  margin-block-start: 12px;
+}
+
+/* --- ۴. نقشه تعاملی: Pinch-to-Zoom امن + کارت شناور پین --- */
+.map-float-controls {
+  position: absolute;
+  inset-block-start: 10px;
+  inset-inline-end: 10px;
+  z-index: 18;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.map-ctrl-btn {
+  min-width: 36px;
+  height: 36px;
+  padding-inline: 10px;
+  background-color: rgba(255, 255, 255, 0.94);
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(30, 36, 43, 0.08);
+  transition: background-color 0.15s var(--ease), border-color 0.15s var(--ease), color 0.15s var(--ease);
+}
+
+.map-ctrl-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.map-ctrl-reset {
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+/* قاعده حیاتی جلوگیری از تله اسکرول در موبایل */
+.map-viewport {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  touch-action: pan-y;
+}
+
+.map-viewport.is-zoomed {
+  touch-action: none;
+  cursor: grab;
+}
+
+.map-viewport.is-dragging {
+  cursor: grabbing;
+}
+
+.map-stage {
+  width: 100%;
+  transform-origin: center center;
+  will-change: transform;
+}
+
+.map-canvas {
+  cursor: default;
+}
+
+/* مقیاس معکوس پین‌ها هنگام زوم */
+.map-pin-marker {
+  transform: translate(-50%, -50%) scale(var(--map-pin-scale, 1));
+}
+
+.map-pin-marker.is-destination .map-pin-dot {
+  background-color: #16A34A;
+  box-shadow: 0 0 0 4px rgba(22, 163, 74, 0.3);
+}
+
+.legend-item.is-destination {
+  border-color: #86EFAC;
+  background-color: #ECFDF3;
+}
+
+.legend-item.is-destination .legend-pin {
+  background-color: #16A34A;
+}
+
+/* کارت شناور اطلاعات پین روی خود نقشه */
+.map-floating-card {
+  position: absolute;
+  inset-block-end: 12px;
+  inset-inline: 12px;
+  z-index: 25;
+  padding: 13px 14px;
+  background-color: rgba(255, 255, 255, 0.97);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1.5px solid var(--accent);
+  border-radius: var(--radius-card);
+  box-shadow: 0 8px 24px rgba(30, 36, 43, 0.16);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.floating-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.floating-card-title-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
+}
+
+.floating-pin-num {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background-color: var(--accent);
+  color: #FFFFFF;
+  font-size: 0.78rem;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.floating-card-name {
+  margin: 0;
+  font-size: 0.94rem;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.floating-dest-badge {
+  padding: 2px 9px;
+  background-color: #ECFDF3;
+  color: #15803D;
+  border: 1px solid #86EFAC;
+  border-radius: var(--radius-pill);
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.floating-card-close {
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-sm);
+  background-color: var(--bg-soft);
+  color: var(--text-secondary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.floating-card-close:hover {
+  border-color: var(--alert);
+  color: var(--alert);
+}
+
+.floating-card-address {
+  margin: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 5px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--accent);
+  line-height: 1.6;
+}
+
+.floating-card-address .icon {
+  margin-block-start: 3px;
+}
+
+.floating-card-desc {
+  margin: 0;
+  font-size: 0.81rem;
+  color: var(--text-secondary);
+  line-height: 1.65;
+}
+
+.floating-card-actions {
+  padding-block-start: 4px;
+}
+
+.floating-faculty-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 38px;
+  padding-inline: 12px;
+  background-color: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  color: #FFFFFF;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.floating-faculty-btn:hover {
+  background-color: var(--accent-hover);
+}
+
+/* تنظیم لایت‌باکس برای Pinch-to-Zoom و کارت شناور */
+.lightbox-viewport {
+  position: relative;
+  overflow: hidden;
+  touch-action: none;
+  align-items: center;
+}
+
+.lightbox-stage {
+  transform-origin: center center;
+  transition: none;
+  will-change: transform;
+}
+
+/* ==========================================================================
    استایل چاپ (@media print)
    ========================================================================== */
 @media print {
@@ -2820,7 +3597,11 @@ input:focus-visible {
   .skip-link,
   .btn-share,
   .sticky-jump-nav,
+  .mobile-bottom-nav,
   .checklist-controls,
+  .reset-confirm-bar,
+  .map-float-controls,
+  .map-floating-card,
   .step-actions,
   .btn-outline,
   .map-tap-hint,

@@ -35,7 +35,7 @@
   <!-- نوار ظریف هویتی بالای صفحه -->
   <div class="top-accent-bar" aria-hidden="true"></div>
 
-  <!-- لایه محو بافت کاغذی -->
+  <!-- لایه محو بافت کاغذی (فقط دسکتاپ؛ در موبایل غیرفعال برای اسکرول ۶۰ فریم) -->
   <div class="paper-grain" aria-hidden="true"></div>
 
   <!-- پرش سریع برای دسترسی‌پذیری -->
@@ -76,10 +76,11 @@
       </div>
     </header>
 
-    <!-- ۲. نوار ناوبری سریع چسبان -->
+    <!-- ۲. نوار ناوبری سریع چسبان (اختصاصی دسکتاپ) -->
     <nav class="sticky-jump-nav" id="sticky-jump-nav" aria-label="دسترسی سریع به بخش‌ها">
       <div class="jump-nav-inner">
-        <a href="#section-timeline" class="jump-link is-active" data-target="section-timeline">تقویم ثبت‌نام</a>
+        <a href="#section-my-path" class="jump-link is-active" data-target="section-my-path">مسیر من</a>
+        <a href="#section-timeline" class="jump-link" data-target="section-timeline">تقویم ثبت‌نام</a>
         <a href="#section-checklist" class="jump-link" data-target="section-checklist">چک‌لیست</a>
         <a href="#section-stepper" class="jump-link" data-target="section-stepper">مسیر ثبت‌نام</a>
         <a href="#section-campus" class="jump-link" data-target="section-campus">نقشه و کانال‌ها</a>
@@ -88,6 +89,11 @@
     </nav>
 
     <main id="main-content">
+      <!-- بخش ویژه بالا: کارت مسیر اختصاصی من (Single Source of Truth) -->
+      <section class="content-section my-path-section" id="section-my-path" aria-labelledby="heading-my-path">
+        <div class="card my-path-card" id="my-path-card"></div>
+      </section>
+
       <!-- بخش ۰: تقویم و تایملاین جامع ثبت‌نام -->
       <section class="content-section timeline-section" id="section-timeline" aria-labelledby="heading-timeline">
         <div class="section-header">
@@ -136,13 +142,30 @@
                 <button type="button" class="chip-btn" data-checklist-filter="remaining">باقیمانده</button>
                 <button type="button" class="chip-btn" data-checklist-filter="completed">آماده‌شده</button>
               </div>
-              <button type="button" class="btn-text-subtle" id="checklist-reset-btn">
-                <svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                  <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
-                  <path d="M3 3v5h5"></path>
-                </svg>
-                <span>بازنشانی تیک‌ها / شرایط</span>
-              </button>
+              <div class="checklist-utility-actions">
+                <button type="button" class="btn-text-subtle" id="checklist-toggle-all-btn">
+                  <svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                  </svg>
+                  <span id="checklist-toggle-all-label">باز کردن همه جزئیات</span>
+                </button>
+                <button type="button" class="btn-text-subtle" id="checklist-reset-btn">
+                  <svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+                    <path d="M3 3v5h5"></path>
+                  </svg>
+                  <span>بازنشانی</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- تاییدیه دو مرحله‌ای درون‌صفحه‌ای برای بازنشانی -->
+            <div class="reset-confirm-bar hidden" id="checklist-reset-confirm" role="alertdialog" aria-live="polite" aria-label="تایید بازنشانی چک‌لیست">
+              <span class="reset-confirm-text">همه تیک‌ها و شرایط انتخاب‌شده پاک شوند؟</span>
+              <div class="reset-confirm-actions">
+                <button type="button" class="btn-danger-sm" id="checklist-reset-confirm-yes">بله، پاک کن</button>
+                <button type="button" class="btn-neutral-sm" id="checklist-reset-confirm-no">انصراف</button>
+              </div>
             </div>
           </div>
 
@@ -188,7 +211,7 @@
                 <line x1="21" y1="3" x2="14" y2="10"></line>
                 <line x1="3" y1="21" x2="10" y2="14"></line>
               </svg>
-              <span>بزرگ‌نمایی</span>
+              <span>تمام‌صفحه</span>
             </button>
           </div>
 
@@ -196,19 +219,36 @@
           <div class="campus-note-banner hidden" id="campus-external-note"></div>
 
           <div class="map-preview-shell" id="map-preview-shell">
-            <div class="map-canvas" id="map-preview-trigger" role="button" tabindex="0" aria-label="باز کردن نقشه در نمای تمام‌صفحه">
-              <img id="campus-map-img" src="" alt="نقشه هوایی راهنمای ساختمان‌های دانشگاه" loading="lazy" />
-              <div class="map-pins-layer" id="map-pins-layer" aria-label="نقاط شماره‌گذاری‌شده روی نقشه"></div>
+            <!-- دکمه‌های شناور زوم و تمام‌صفحه روی نقشه -->
+            <div class="map-float-controls" aria-label="کنترل‌های بزرگ‌نمایی نقشه">
+              <button type="button" class="map-ctrl-btn" id="inline-zoom-in-btn" aria-label="بزرگ‌نمایی">+</button>
+              <button type="button" class="map-ctrl-btn" id="inline-zoom-out-btn" aria-label="کوچک‌نمایی">−</button>
+              <button type="button" class="map-ctrl-btn map-ctrl-reset hidden" id="inline-zoom-reset-btn" aria-label="بازنشانی نما">بازنشانی</button>
+              <button type="button" class="map-ctrl-btn" id="inline-fullscreen-btn" aria-label="نمای تمام‌صفحه">
+                <svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <polyline points="15 3 21 3 21 9"></polyline>
+                  <polyline points="9 21 3 21 3 15"></polyline>
+                  <line x1="21" y1="3" x2="14" y2="10"></line>
+                  <line x1="3" y1="21" x2="10" y2="14"></line>
+                </svg>
+              </button>
             </div>
-            <span class="map-tap-hint" aria-hidden="true">
-              <svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="11" cy="11" r="8"></circle>
-                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                <line x1="11" y1="8" x2="11" y2="14"></line>
-                <line x1="8" y1="11" x2="14" y2="11"></line>
-              </svg>
-              <span>برای بزرگ‌نمایی روی نقشه بزنید</span>
+
+            <div class="map-viewport" id="inline-map-viewport">
+              <div class="map-stage" id="inline-map-stage">
+                <div class="map-canvas" id="map-preview-trigger">
+                  <img id="campus-map-img" src="" alt="نقشه هوایی راهنمای ساختمان‌های دانشگاه" loading="lazy" draggable="false" />
+                  <div class="map-pins-layer" id="map-pins-layer" aria-label="نقاط شماره‌گذاری‌شده روی نقشه"></div>
+                </div>
+              </div>
+            </div>
+
+            <span class="map-tap-hint" id="map-tap-hint" aria-hidden="true">
+              <span>با دو انگشت زوم کنید یا روی پین‌ها بزنید</span>
             </span>
+
+            <!-- کارت شناور اطلاعات پین روی خود نقشه -->
+            <div class="map-floating-card hidden" id="map-floating-card" role="region" aria-live="polite" aria-label="مشخصات ساختمان انتخاب‌شده"></div>
           </div>
 
           <div class="map-legend-wrapper">
@@ -316,6 +356,51 @@
     </footer>
   </div>
 
+  <!-- نوار ناوبری پایین صفحه اختصاصی موبایل (Mobile Bottom Tab Bar) -->
+  <nav class="mobile-bottom-nav" id="mobile-bottom-nav" aria-label="ناوبری سریع موبایل">
+    <a href="#section-my-path" class="bottom-tab is-active" data-target="section-my-path">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="10"></circle>
+        <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon>
+      </svg>
+      <span>مسیر من</span>
+    </a>
+    <a href="#section-checklist" class="bottom-tab" data-target="section-checklist">
+      <span class="bottom-tab-icon-wrap">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M9 11l3 3L22 4"></path>
+          <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+        </svg>
+        <span class="bottom-tab-badge hidden" id="bottom-nav-checklist-badge"></span>
+      </span>
+      <span>چک‌لیست</span>
+    </a>
+    <a href="#section-stepper" class="bottom-tab" data-target="section-stepper">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+        <line x1="16" y1="2" x2="16" y2="6"></line>
+        <line x1="8" y1="2" x2="8" y2="6"></line>
+        <line x1="3" y1="10" x2="21" y2="10"></line>
+      </svg>
+      <span>برنامه</span>
+    </a>
+    <a href="#section-campus" class="bottom-tab" data-target="section-campus">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+        <circle cx="12" cy="10" r="3"></circle>
+      </svg>
+      <span>نقشه</span>
+    </a>
+    <a href="#section-status-faq" class="bottom-tab" data-target="section-status-faq">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="10"></circle>
+        <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+        <line x1="12" y1="17" x2="12.01" y2="17"></line>
+      </svg>
+      <span>سوالات</span>
+    </a>
+  </nav>
+
   <!-- لایت‌باکس تمام‌صفحه نقشه -->
   <div class="lightbox" id="map-lightbox" role="dialog" aria-modal="true" aria-labelledby="lightbox-title" hidden>
     <div class="lightbox-header">
@@ -333,7 +418,7 @@
             <line x1="5" y1="12" x2="19" y2="12"></line>
           </svg>
         </button>
-        <button type="button" class="lb-btn lb-btn-text" id="zoom-reset-btn">ریست</button>
+        <button type="button" class="lb-btn lb-btn-text" id="zoom-reset-btn">بازنشانی</button>
         <button type="button" class="lb-btn lb-close" id="lightbox-close-btn" aria-label="بستن نقشه">
           <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -349,6 +434,8 @@
           <div class="map-pins-layer map-pins-lightbox" id="lightbox-pins-layer"></div>
         </div>
       </div>
+      <!-- کارت شناور پین در نمای تمام‌صفحه -->
+      <div class="map-floating-card hidden" id="lightbox-floating-card" role="region" aria-live="polite" aria-label="مشخصات ساختمان انتخاب‌شده"></div>
     </div>
   </div>
 

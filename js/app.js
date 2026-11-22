@@ -1,7 +1,7 @@
 /**
  * ============================================================================
  * منطق رندرینگ و تعاملات راهنمای روز ثبت‌نام (app.js)
- * Zero-Dependency Vanilla JavaScript
+ * Zero-Dependency Vanilla JavaScript — Single Source of Truth State
  * ============================================================================
  */
 
@@ -14,6 +14,7 @@
   const STORAGE_KEYS = {
     checklist: `reg_guide_${DATA.storageVersion}_checklist`,
     conditions: `reg_guide_${DATA.storageVersion}_conditions`,
+    major: `reg_guide_${DATA.storageVersion}_major`,
     steps: `reg_guide_${DATA.storageVersion}_steps`,
     faculty: `reg_guide_${DATA.storageVersion}_faculty`
   };
@@ -61,7 +62,7 @@
     try {
       localStorage.setItem(key, JSON.stringify(Array.from(setObj)));
     } catch {
-      // در حالت Private Browsing یا پر بودن حافظه خطا نادیده گرفته می‌شود
+      // ignore storage errors in private mode
     }
   }
 
@@ -71,7 +72,23 @@
     return new Set(Array.from(saved).filter((id) => validIds.has(id)));
   }
 
-  function loadStoredFaculty() {
+  function loadStoredMajor() {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.major);
+      if (saved && DATA.majors && DATA.majors.some((m) => m.id === saved)) {
+        return saved;
+      }
+    } catch {
+      // ignore
+    }
+    return null;
+  }
+
+  function loadStoredFaculty(majorId) {
+    if (majorId && DATA.majors) {
+      const m = DATA.majors.find((item) => item.id === majorId);
+      if (m) return m.facultyId;
+    }
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.faculty);
       if (saved && DATA.faculties && DATA.faculties.some((f) => f.id === saved)) {
@@ -83,19 +100,23 @@
     return DATA.faculties && DATA.faculties.length ? DATA.faculties[0].id : null;
   }
 
-  // وضعیت برنامه
+  const initialMajorId = loadStoredMajor();
+
+  // وضعیت مشترک سطح بالا (Single Source of Truth)
   const state = {
     checkedDocs: loadStoredSet(STORAGE_KEYS.checklist),
     selectedConditions: loadStoredConditions(),
+    selectedMajorId: initialMajorId,
+    selectedFacultyId: loadStoredFaculty(initialMajorId),
     doneSteps: loadStoredSet(STORAGE_KEYS.steps),
-    selectedFacultyId: loadStoredFaculty(),
     statusFilter: "all",
+    expandedDocs: new Set(), // پیش‌فرض همه جمع (Collapsed)
     tuitionTableOpen: false,
     faqQuery: "",
-    zoom: 1
+    activePinId: null
   };
 
-  // آیکون‌های خطی Inline SVG (stroke-width="1.6")
+  // آیکون‌های خطی Inline SVG
   const ICONS = {
     alert: `<svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>`,
     info: `<svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>`,
@@ -103,6 +124,7 @@
     check: `<svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>`,
     plus: `<svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>`,
     lock: `<svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>`,
+    close: `<svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`,
     copy: `<svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`,
     external: `<svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>`,
     chevron: `<svg class="icon faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>`,
@@ -112,7 +134,9 @@
     userCheck: `<svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><polyline points="17 11 19 13 23 9"></polyline></svg>`,
     key: `<svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"></path></svg>`,
     table: `<svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="3" y1="15" x2="21" y2="15"></line><line x1="9" y1="3" x2="9" y2="21"></line></svg>`,
-    sparkle: `<svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8L12 2z"></path></svg>`
+    sparkle: `<svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8L12 2z"></path></svg>`,
+    compass: `<svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon></svg>`,
+    listCheck: `<svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>`
   };
 
   // نمایش Toast
@@ -147,6 +171,113 @@
     } catch {
       showToast("کپی خودکار انجام نشد؛ لطفاً دستی کپی کنید.");
     }
+  }
+
+  // ==========================================================================
+  // توابع مرکزی Single Source of Truth (محاسبه چک‌لیست + همگام‌سازی سراسری)
+  // ==========================================================================
+  function getActiveMajor() {
+    if (!state.selectedMajorId || !DATA.majors) return null;
+    return DATA.majors.find((m) => m.id === state.selectedMajorId) || null;
+  }
+
+  function getChecklistStats() {
+    const selectedConditions = Array.from(state.selectedConditions);
+
+    // ۱. فقط آیتم‌هایی که مربوط به شرایط انتخاب‌شده همین کاربر هستند:
+    const applicableItems = DATA.checklist.filter((item) => {
+      const isExcluded = (item.excludeWhen || []).some((cond) => selectedConditions.includes(cond));
+      if (isExcluded) return false;
+      return item.condition === "mandatory" || selectedConditions.includes(item.condition);
+    });
+
+    // ۲. تعداد تیک‌خورده‌ها حتماً باید اشتراک (Intersection) با applicableItems باشد:
+    const applicableCompletedCount = applicableItems.filter((item) =>
+      state.checkedDocs.has(item.id)
+    ).length;
+
+    const applicableTotalCount = applicableItems.length;
+    const remainingCount = Math.max(0, applicableTotalCount - applicableCompletedCount);
+    const progressPercent =
+      applicableTotalCount === 0
+        ? 0
+        : Math.round((applicableCompletedCount / applicableTotalCount) * 100);
+
+    // ۳. فیلتر نمایش (همه / باقیمانده / آماده‌شده) فقط روی displayedItems اعمال می‌شود:
+    const displayedItems = applicableItems.filter((item) => {
+      if (state.statusFilter === "remaining") return !state.checkedDocs.has(item.id);
+      if (state.statusFilter === "completed") return state.checkedDocs.has(item.id);
+      return true;
+    });
+
+    return {
+      applicableItems,
+      applicableCompletedCount,
+      applicableTotalCount,
+      remainingCount,
+      progressPercent,
+      displayedItems
+    };
+  }
+
+  function toggleCondition(condId) {
+    if (state.selectedConditions.has(condId)) {
+      state.selectedConditions.delete(condId);
+    } else {
+      state.selectedConditions.add(condId);
+    }
+    saveStoredSet(STORAGE_KEYS.conditions, state.selectedConditions);
+    syncAllViews();
+  }
+
+  function selectMajor(majorId) {
+    state.selectedMajorId = majorId || null;
+    try {
+      if (state.selectedMajorId) {
+        localStorage.setItem(STORAGE_KEYS.major, state.selectedMajorId);
+      } else {
+        localStorage.removeItem(STORAGE_KEYS.major);
+      }
+    } catch {
+      // ignore
+    }
+
+    const major = getActiveMajor();
+    if (major) {
+      state.selectedFacultyId = major.facultyId;
+      try {
+        localStorage.setItem(STORAGE_KEYS.faculty, major.facultyId);
+      } catch {
+        // ignore
+      }
+    }
+
+    renderMyPathCard();
+    renderFacultySelector();
+    renderStepper();
+    updateMapDestinationHighlight();
+    if (state.activePinId) {
+      renderFloatingPinCard(state.activePinId);
+    }
+  }
+
+  function updateBottomNavBadge() {
+    const badge = document.getElementById("bottom-nav-checklist-badge");
+    if (!badge) return;
+    const { remainingCount } = getChecklistStats();
+    if (remainingCount > 0) {
+      badge.textContent = toFaDigits(remainingCount);
+      badge.classList.remove("hidden");
+    } else {
+      badge.classList.add("hidden");
+    }
+  }
+
+  function syncAllViews() {
+    renderMyPathCard();
+    renderProfileBuilder();
+    renderChecklist();
+    updateBottomNavBadge();
   }
 
   // ==========================================================================
@@ -202,6 +333,164 @@
   }
 
   // ==========================================================================
+  // ۱-الف. کارت «مسیر اختصاصی من» در بالای صفحه (Single Source of Truth)
+  // ==========================================================================
+  function renderMyPathCard() {
+    const card = document.getElementById("my-path-card");
+    if (!card || !DATA.majors) return;
+
+    const activeMajor = getActiveMajor();
+    const { applicableCompletedCount, applicableTotalCount, progressPercent } = getChecklistStats();
+
+    // گروه‌بندی ۲۰ رشته برای <optgroup>
+    const groupsOrder = [];
+    const grouped = new Map();
+    DATA.majors.forEach((m) => {
+      if (!grouped.has(m.group)) {
+        grouped.set(m.group, []);
+        groupsOrder.push(m.group);
+      }
+      grouped.get(m.group).push(m);
+    });
+
+    const optionsHtml = groupsOrder
+      .map((groupName) => {
+        const opts = grouped
+          .get(groupName)
+          .map(
+            (m) =>
+              `<option value="${m.id}"${state.selectedMajorId === m.id ? " selected" : ""}>${toFaDigits(m.label)}</option>`
+          )
+          .join("");
+        return `<optgroup label="${toFaDigits(groupName)}">${opts}</optgroup>`;
+      })
+      .join("");
+
+    const quickChipsHtml = (DATA.checklistConditions || [])
+      .map((cond) => {
+        const isActive = state.selectedConditions.has(cond.id);
+        return `
+          <button
+            type="button"
+            class="mypath-cond-chip${isActive ? " is-active" : ""}"
+            data-mypath-cond="${cond.id}"
+            aria-pressed="${isActive}"
+          >
+            ${isActive ? ICONS.check : ICONS.plus}
+            <span>${toFaDigits(cond.label.split("(")[0].trim())}</span>
+          </button>
+        `;
+      })
+      .join("");
+
+    const resultHtml = activeMajor
+      ? `
+        <div class="mypath-result">
+          ${
+            activeMajor.warningBanner
+              ? `<div class="mypath-warning-banner" role="alert">${ICONS.alert}<span>${toFaDigits(activeMajor.warningBanner)}</span></div>`
+              : ""
+          }
+          <div class="mypath-result-grid">
+            <div class="mypath-result-item">
+              <span class="mypath-result-kicker">${ICONS.calendar}<span>روز مراجعه حضوری شما</span></span>
+              <strong class="mypath-result-value">${toFaDigits(activeMajor.date)}</strong>
+              <span class="mypath-result-sub">ثبت‌نام آنلاین هم‌آوا: ۲ تا ۵ آذر ۱۴۰۵ (حضور شخص پذیرفته‌شده الزامی است)</span>
+            </div>
+            <div class="mypath-result-item">
+              <span class="mypath-result-kicker">${ICONS.mapPin}<span>ساختمان و نشانی دقیق</span></span>
+              <strong class="mypath-result-value">${toFaDigits(activeMajor.building)}</strong>
+              <span class="mypath-result-sub">${toFaDigits(activeMajor.address)}</span>
+            </div>
+          </div>
+
+          <div class="mypath-footer-row">
+            <div class="mypath-progress-pill${progressPercent === 100 && applicableTotalCount > 0 ? " is-complete" : ""}">
+              ${ICONS.listCheck}
+              <span>${toFaDigits(applicableCompletedCount)} از ${toFaDigits(applicableTotalCount)} مدرک آماده است (${toFaDigits(progressPercent)}٪)</span>
+            </div>
+            <div class="mypath-cta-row">
+              <button type="button" class="mypath-btn-primary" id="mypath-go-checklist">
+                ${ICONS.listCheck}
+                <span>رفتن به چک‌لیست من</span>
+              </button>
+              <button type="button" class="mypath-btn-secondary" id="mypath-go-map">
+                ${ICONS.mapPin}
+                <span>مشاهده ساختمان روی نقشه</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      `
+      : `
+        <div class="mypath-placeholder">
+          <span>با انتخاب رشته و نیمسال قبولی، تاریخ دقیق مراجعه حضوری، ساختمان ثبت‌نام و مقصد شما روی نقشه فوراً مشخص می‌شود.</span>
+          <div class="mypath-progress-pill${progressPercent === 100 && applicableTotalCount > 0 ? " is-complete" : ""}">
+            ${ICONS.listCheck}
+            <span>چک‌لیست شما: ${toFaDigits(applicableCompletedCount)} از ${toFaDigits(applicableTotalCount)} مدرک آماده است (${toFaDigits(progressPercent)}٪)</span>
+          </div>
+        </div>
+      `;
+
+    card.innerHTML = `
+      <div class="mypath-header">
+        <div class="mypath-title-wrap">
+          <span class="mypath-icon-badge">${ICONS.compass}</span>
+          <div>
+            <h2 class="mypath-title" id="heading-my-path">مسیر اختصاصی من (تاریخ و مکان دقیق شما)</h2>
+            <p class="mypath-subtitle">رشته و شرایط خود را مشخص کنید تا کل راهنما، چک‌لیست و نقشه برایتان شخصی‌سازی شود.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="mypath-field-group">
+        <label for="my-path-major-select" class="mypath-field-label">۱. رشته و نیمسال قبولی:</label>
+        <div class="mypath-select-wrap">
+          <select id="my-path-major-select" class="mypath-select">
+            <option value="">— انتخاب رشته و نیمسال قبولی —</option>
+            ${optionsHtml}
+          </select>
+        </div>
+      </div>
+
+      <div class="mypath-field-group">
+        <span class="mypath-field-label">۲. شرایط ویژه شما (اختیاری — چندانتخابی):</span>
+        <div class="mypath-cond-chips" role="group" aria-label="انتخاب سریع شرایط پذیرش">
+          ${quickChipsHtml}
+        </div>
+      </div>
+
+      ${resultHtml}
+    `;
+
+    const selectEl = card.querySelector("#my-path-major-select");
+    selectEl.addEventListener("change", (e) => {
+      selectMajor(e.target.value);
+    });
+
+    card.querySelectorAll("[data-mypath-cond]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        toggleCondition(btn.dataset.mypathCond);
+      });
+    });
+
+    const goChecklistBtn = card.querySelector("#mypath-go-checklist");
+    if (goChecklistBtn) {
+      goChecklistBtn.addEventListener("click", () => {
+        const target = document.getElementById("section-checklist");
+        if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+    }
+
+    const goMapBtn = card.querySelector("#mypath-go-map");
+    if (goMapBtn && activeMajor) {
+      goMapBtn.addEventListener("click", () => {
+        focusMapPin(activeMajor.mapPinId, true);
+      });
+    }
+  }
+
+  // ==========================================================================
   // ۱-ب. بخش تقویم و تایملاین جامع ثبت‌نام
   // ==========================================================================
   function renderTimeline() {
@@ -237,31 +526,37 @@
   }
 
   // ==========================================================================
-  // ۲. نوار چسبان Scroll-Spy
+  // ۲. Scroll-Spy هوشمند برای هر دو نوار ناوبری (دسکتاپ بالا + موبایل پایین)
   // ==========================================================================
   function initScrollSpy() {
-    const sections = [
+    const sectionIds = [
+      "section-my-path",
       "section-timeline",
       "section-checklist",
       "section-stepper",
       "section-campus",
       "section-status-faq"
-    ]
-      .map((id) => document.getElementById(id))
-      .filter(Boolean);
+    ];
 
-    const navLinks = Array.from(document.querySelectorAll(".jump-link"));
-    if (!sections.length || !navLinks.length) return;
+    const sections = sectionIds.map((id) => document.getElementById(id)).filter(Boolean);
+    const desktopLinks = Array.from(document.querySelectorAll(".jump-link"));
+    const mobileTabs = Array.from(document.querySelectorAll(".bottom-tab"));
 
-    function setActiveLink(id) {
-      navLinks.forEach((link) => {
+    function setActiveSection(id) {
+      desktopLinks.forEach((link) => {
         const match = link.dataset.target === id;
         link.classList.toggle("is-active", match);
-        if (match) {
-          link.setAttribute("aria-current", "location");
-        } else {
-          link.removeAttribute("aria-current");
-        }
+        if (match) link.setAttribute("aria-current", "location");
+        else link.removeAttribute("aria-current");
+      });
+
+      // در نوار موبایل، تقویم و مسیر من هر دو روی «مسیر من» یا نزدیک‌ترین تب مپ می‌شوند
+      const mobileTarget = id === "section-timeline" ? "section-my-path" : id;
+      mobileTabs.forEach((tab) => {
+        const match = tab.dataset.target === mobileTarget;
+        tab.classList.toggle("is-active", match);
+        if (match) tab.setAttribute("aria-current", "location");
+        else tab.removeAttribute("aria-current");
       });
     }
 
@@ -271,26 +566,26 @@
           .filter((entry) => entry.isIntersecting)
           .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
         if (visible.length > 0) {
-          setActiveLink(visible[0].target.id);
+          setActiveSection(visible[0].target.id);
         }
       },
       {
-        rootMargin: "-80px 0px -65% 0px",
+        rootMargin: "-15% 0px -65% 0px",
         threshold: 0
       }
     );
 
     sections.forEach((sec) => observer.observe(sec));
 
-    navLinks.forEach((link) => {
+    [...desktopLinks, ...mobileTabs].forEach((link) => {
       link.addEventListener("click", () => {
-        setActiveLink(link.dataset.target);
+        setActiveSection(link.dataset.target);
       });
     });
   }
 
   // ==========================================================================
-  // ۳. بخش اول: چک‌لیست هوشمند (پروفایل چندانتخابی + Progress Bar دقیق)
+  // ۳. بخش اول: چک‌لیست هوشمند (Progressive Disclosure + تاییدیه بازنشانی)
   // ==========================================================================
   function renderOfficialNotice() {
     const box = document.getElementById("official-notice-box");
@@ -332,8 +627,8 @@
     const tData = DATA.tuitionTable;
     if (!tData || !tData.rows || !tData.rows.length) return null;
 
-    const li = document.createElement("li");
-    li.className = "checklist-tuition-wrap";
+    const wrap = document.createElement("div");
+    wrap.className = "checklist-tuition-inline";
 
     const isOpen = state.tuitionTableOpen;
 
@@ -381,7 +676,7 @@
       .map((n) => `<li>${toFaDigits(n)}</li>`)
       .join("");
 
-    li.innerHTML = `
+    wrap.innerHTML = `
       <div class="tuition-accordion${isOpen ? " is-open" : ""}">
         <button type="button" class="tuition-accordion-trigger" aria-expanded="${isOpen}" aria-controls="tuition-table-panel">
           <span class="tuition-trigger-title">
@@ -412,15 +707,16 @@
       </div>
     `;
 
-    const trigger = li.querySelector(".tuition-accordion-trigger");
-    const acc = li.querySelector(".tuition-accordion");
-    trigger.addEventListener("click", () => {
+    const trigger = wrap.querySelector(".tuition-accordion-trigger");
+    const acc = wrap.querySelector(".tuition-accordion");
+    trigger.addEventListener("click", (e) => {
+      e.stopPropagation();
       state.tuitionTableOpen = !state.tuitionTableOpen;
       acc.classList.toggle("is-open", state.tuitionTableOpen);
       trigger.setAttribute("aria-expanded", String(state.tuitionTableOpen));
     });
 
-    return li;
+    return wrap;
   }
 
   function getConditionAddedCount(condId) {
@@ -439,6 +735,34 @@
       const isExcluded = (item.excludeWhen || []).some((c) => selected.includes(c));
       return !isExcluded;
     }).length;
+  }
+
+  function itemHasDetails(item) {
+    return Boolean(
+      item.highlightBox ||
+        item.subNote ||
+        item.subNoteHtml ||
+        item.fieldsGuide ||
+        (item.links && item.links.length) ||
+        item.linkUrl ||
+        item.warning ||
+        item.attachTuitionTable
+    );
+  }
+
+  function updateToggleAllButton(displayedItems) {
+    const btn = document.getElementById("checklist-toggle-all-btn");
+    const label = document.getElementById("checklist-toggle-all-label");
+    if (!btn || !label) return;
+    const expandableIds = displayedItems.filter(itemHasDetails).map((i) => i.id);
+    if (expandableIds.length === 0) {
+      btn.classList.add("hidden");
+      return;
+    }
+    btn.classList.remove("hidden");
+    const allOpen = expandableIds.every((id) => state.expandedDocs.has(id));
+    label.textContent = allOpen ? "بستن همه جزئیات" : "باز کردن همه جزئیات";
+    btn.classList.toggle("is-all-open", allOpen);
   }
 
   function renderProfileBuilder() {
@@ -492,15 +816,7 @@
 
     container.querySelectorAll("[data-condition-id]").forEach((btn) => {
       btn.addEventListener("click", () => {
-        const condId = btn.dataset.conditionId;
-        if (state.selectedConditions.has(condId)) {
-          state.selectedConditions.delete(condId);
-        } else {
-          state.selectedConditions.add(condId);
-        }
-        saveStoredSet(STORAGE_KEYS.conditions, state.selectedConditions);
-        renderProfileBuilder();
-        renderChecklist();
+        toggleCondition(btn.dataset.conditionId);
       });
     });
   }
@@ -511,25 +827,12 @@
     const progressBlock = document.getElementById("checklist-progress-block");
     const celebrationEl = document.getElementById("checklist-celebration");
 
-    const selectedConditions = Array.from(state.selectedConditions);
-
-    // ۱. فقط آیتم‌هایی که مربوط به شرایط انتخاب‌شده همین کاربر هستند:
-    const applicableItems = DATA.checklist.filter((item) => {
-      const isExcluded = (item.excludeWhen || []).some((cond) => selectedConditions.includes(cond));
-      if (isExcluded) return false;
-      return item.condition === "mandatory" || selectedConditions.includes(item.condition);
-    });
-
-    // ۲. تعداد تیک‌خورده‌ها حتماً باید اشتراک (Intersection) با applicableItems باشد:
-    const applicableCompletedCount = applicableItems.filter((item) =>
-      state.checkedDocs.has(item.id)
-    ).length;
-
-    const applicableTotalCount = applicableItems.length;
-    const progressPercent =
-      applicableTotalCount === 0
-        ? 0
-        : Math.round((applicableCompletedCount / applicableTotalCount) * 100);
+    const {
+      applicableCompletedCount,
+      applicableTotalCount,
+      progressPercent,
+      displayedItems
+    } = getChecklistStats();
 
     // به‌روزرسانی نوار پیشرفت و پیام تبریک ۱۰۰٪
     document.getElementById("checklist-progress-text").textContent =
@@ -542,12 +845,7 @@
     if (progressBlock) progressBlock.classList.toggle("is-complete", isComplete);
     if (celebrationEl) celebrationEl.classList.toggle("hidden", !isComplete);
 
-    // ۳. فیلتر نمایش (همه / باقیمانده / آماده‌شده) فقط روی displayedItems اعمال می‌شود، نه روی Progress Bar!
-    const displayedItems = applicableItems.filter((item) => {
-      if (state.statusFilter === "remaining") return !state.checkedDocs.has(item.id);
-      if (state.statusFilter === "completed") return state.checkedDocs.has(item.id);
-      return true;
-    });
+    updateToggleAllButton(displayedItems);
 
     listEl.innerHTML = "";
     if (displayedItems.length === 0) {
@@ -578,8 +876,11 @@
       }
 
       const checked = state.checkedDocs.has(item.id);
+      const hasDetails = itemHasDetails(item);
+      const isExpanded = hasDetails && state.expandedDocs.has(item.id);
+
       const li = document.createElement("li");
-      li.className = `checklist-item${checked ? " is-checked" : ""}`;
+      li.className = `checklist-item${checked ? " is-checked" : ""}${isExpanded ? " is-expanded" : ""}`;
 
       const badgeText = item.guide || item.qty || "";
 
@@ -626,49 +927,91 @@
         ? `<div class="checklist-links-row">${linkItems
             .map(
               (lnk) =>
-                `<a href="${lnk.url}" target="_blank" rel="noopener noreferrer" class="checklist-link${lnk.ltr ? " is-ltr" : ""}" onclick="event.stopPropagation()">${ICONS.external}<span>${toFaDigits(lnk.label)}</span></a>`
+                `<a href="${lnk.url}" target="_blank" rel="noopener noreferrer" class="checklist-link${lnk.ltr ? " is-ltr" : ""}">${ICONS.external}<span>${toFaDigits(lnk.label)}</span></a>`
             )
             .join("")}</div>`
         : "";
 
+      const panelId = `doc-details-${item.id}`;
+
       li.innerHTML = `
-        <label class="checklist-label">
-          <input type="checkbox" class="checklist-checkbox" data-doc-id="${item.id}" ${checked ? "checked" : ""} />
-          <div class="checklist-body">
-            <div class="checklist-title-row">
+        <div class="checklist-row-head">
+          <label class="checklist-check-area">
+            <input type="checkbox" class="checklist-checkbox" data-doc-id="${item.id}" ${checked ? "checked" : ""} />
+            <div class="checklist-title-wrap">
               <span class="checklist-title">${toFaDigits(item.title)}</span>
               ${badgeText ? `<span class="checklist-qty">${toFaDigits(badgeText)}</span>` : ""}
             </div>
-            ${highlightHtml}
-            ${subNoteContent}
-            ${fieldsGuideHtml}
-            ${linksHtml}
-            ${
-              item.warning
-                ? `<div class="alert-callout" role="note">${ICONS.alert}<span>${toFaDigits(item.warning)}</span></div>`
-                : ""
-            }
+          </label>
+          ${
+            hasDetails
+              ? `<button type="button" class="checklist-detail-toggle" aria-expanded="${isExpanded}" aria-controls="${panelId}">
+                  <span>جزئیات</span>
+                  ${ICONS.chevron}
+                </button>`
+              : ""
+          }
+        </div>
+        ${
+          hasDetails
+            ? `
+          <div class="checklist-details-panel" id="${panelId}">
+            <div class="checklist-details-inner">
+              <div class="checklist-details-body">
+                ${highlightHtml}
+                ${subNoteContent}
+                ${fieldsGuideHtml}
+                ${linksHtml}
+                ${
+                  item.warning
+                    ? `<div class="alert-callout" role="note">${ICONS.alert}<span>${toFaDigits(item.warning)}</span></div>`
+                    : ""
+                }
+              </div>
+            </div>
           </div>
-        </label>
+        `
+            : ""
+        }
       `;
 
+      // اتصال جدول شهریه داخل بخش جزئیات آیتم مربوطه
+      if (item.attachTuitionTable) {
+        const detailsBody = li.querySelector(".checklist-details-body");
+        const tuitionEl = buildTuitionCollapsibleElement();
+        if (detailsBody && tuitionEl) detailsBody.appendChild(tuitionEl);
+      }
+
+      // تفکیک کامل کلیک: چک‌باکس فقط تیک می‌زند + هنگام تیک زدن جزئیات خودکار جمع می‌شود
       const checkbox = li.querySelector(".checklist-checkbox");
       checkbox.addEventListener("change", () => {
         if (checkbox.checked) {
           state.checkedDocs.add(item.id);
+          state.expandedDocs.delete(item.id);
         } else {
           state.checkedDocs.delete(item.id);
         }
         saveStoredSet(STORAGE_KEYS.checklist, state.checkedDocs);
         renderChecklist();
+        renderMyPathCard();
+        updateBottomNavBadge();
       });
 
-      listEl.appendChild(li);
-
-      if (item.attachTuitionTable) {
-        const tuitionEl = buildTuitionCollapsibleElement();
-        if (tuitionEl) listEl.appendChild(tuitionEl);
+      // دکمه جزئیات فقط بخش توضیحات را با انیمیشن نرم باز/بسته می‌کند
+      const detailBtn = li.querySelector(".checklist-detail-toggle");
+      if (detailBtn) {
+        detailBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          const nowOpen = !state.expandedDocs.has(item.id);
+          if (nowOpen) state.expandedDocs.add(item.id);
+          else state.expandedDocs.delete(item.id);
+          li.classList.toggle("is-expanded", nowOpen);
+          detailBtn.setAttribute("aria-expanded", String(nowOpen));
+          updateToggleAllButton(getChecklistStats().displayedItems);
+        });
       }
+
+      listEl.appendChild(li);
     });
   }
 
@@ -682,52 +1025,57 @@
       });
     });
 
-    document.getElementById("checklist-reset-btn").addEventListener("click", () => {
+    // باز کردن / بستن همه جزئیات
+    const toggleAllBtn = document.getElementById("checklist-toggle-all-btn");
+    if (toggleAllBtn) {
+      toggleAllBtn.addEventListener("click", () => {
+        const { displayedItems } = getChecklistStats();
+        const expandableIds = displayedItems.filter(itemHasDetails).map((i) => i.id);
+        const allOpen = expandableIds.every((id) => state.expandedDocs.has(id));
+        if (allOpen) {
+          expandableIds.forEach((id) => state.expandedDocs.delete(id));
+        } else {
+          expandableIds.forEach((id) => state.expandedDocs.add(id));
+        }
+        renderChecklist();
+      });
+    }
+
+    // تاییدیه دو مرحله‌ای درون‌صفحه‌ای برای بازنشانی (بدون window.confirm)
+    const resetBtn = document.getElementById("checklist-reset-btn");
+    const confirmBar = document.getElementById("checklist-reset-confirm");
+    const confirmYes = document.getElementById("checklist-reset-confirm-yes");
+    const confirmNo = document.getElementById("checklist-reset-confirm-no");
+
+    resetBtn.addEventListener("click", () => {
       if (state.checkedDocs.size === 0 && state.selectedConditions.size === 0 && state.statusFilter === "all") {
         showToast("چک‌لیست همین الان در حالت پیش‌فرض است.");
         return;
       }
+      confirmBar.classList.remove("hidden");
+    });
+
+    confirmNo.addEventListener("click", () => {
+      confirmBar.classList.add("hidden");
+    });
+
+    confirmYes.addEventListener("click", () => {
       state.checkedDocs.clear();
       state.selectedConditions.clear();
+      state.expandedDocs.clear();
       state.statusFilter = "all";
       filterButtons.forEach((b) => b.classList.toggle("is-active", b.dataset.checklistFilter === "all"));
       saveStoredSet(STORAGE_KEYS.checklist, state.checkedDocs);
       saveStoredSet(STORAGE_KEYS.conditions, state.selectedConditions);
-      renderProfileBuilder();
-      renderChecklist();
-      showToast("تیک‌ها و شرایط انتخاب‌شده بازنشانی شد.");
+      confirmBar.classList.add("hidden");
+      syncAllViews();
+      showToast("همه تیک‌ها و شرایط انتخاب‌شده پاک شد.");
     });
   }
 
   // ==========================================================================
   // ۴. بخش دوم: مسیر مرحله‌به‌مرحله + برنامه هر دانشکده + اتصال به نقشه
   // ==========================================================================
-  let highlightTimer = null;
-  function highlightMapPin(pinId, scrollTarget = "map") {
-    const legendItem = document.getElementById(`legend-${pinId}`);
-    const mapPreview = document.getElementById("map-preview-shell");
-    const pinMarkers = document.querySelectorAll(`.map-pin-marker[data-pin-id="${pinId}"]`);
-
-    document.querySelectorAll(".legend-item.is-highlighted, .map-pin-marker.is-highlighted").forEach((el) => {
-      el.classList.remove("is-highlighted");
-    });
-
-    if (legendItem) legendItem.classList.add("is-highlighted");
-    pinMarkers.forEach((el) => el.classList.add("is-highlighted"));
-
-    if (scrollTarget === "map" && mapPreview) {
-      mapPreview.scrollIntoView({ behavior: "smooth", block: "center" });
-    } else if (scrollTarget === "legend" && legendItem) {
-      legendItem.scrollIntoView({ behavior: "smooth", block: "nearest" });
-    }
-
-    clearTimeout(highlightTimer);
-    highlightTimer = setTimeout(() => {
-      if (legendItem) legendItem.classList.remove("is-highlighted");
-      pinMarkers.forEach((el) => el.classList.remove("is-highlighted"));
-    }, 2600);
-  }
-
   function getActiveFaculty() {
     if (!DATA.faculties || !DATA.faculties.length) return null;
     return DATA.faculties.find((f) => f.id === state.selectedFacultyId) || DATA.faculties[0];
@@ -891,7 +1239,7 @@
 
       const jumpBtn = li.querySelector(".btn-map-jump");
       if (jumpBtn && resolvedPinId) {
-        jumpBtn.addEventListener("click", () => highlightMapPin(resolvedPinId, "map"));
+        jumpBtn.addEventListener("click", () => focusMapPin(resolvedPinId, true));
       }
 
       listEl.appendChild(li);
@@ -899,9 +1247,129 @@
   }
 
   // ==========================================================================
-  // ۵. بخش سوم: نقشه دانشگاه (Lightbox + Zoom/Pan)، نشانی‌های تکمیلی و کانال‌ها
+  // ۵. بخش سوم: نقشه دانشگاه (کارت شناور پین + Pinch-to-Zoom امن بدون تله‌اسکرول)
   // ==========================================================================
-  function renderPinsLayer(containerEl, isLightbox) {
+  function updateMapDestinationHighlight() {
+    const activeMajor = getActiveMajor();
+    const destPinId = activeMajor ? activeMajor.mapPinId : null;
+
+    document.querySelectorAll(".map-pin-marker").forEach((el) => {
+      el.classList.toggle("is-destination", Boolean(destPinId && el.dataset.pinId === destPinId));
+    });
+
+    document.querySelectorAll(".legend-item").forEach((el) => {
+      el.classList.toggle("is-destination", Boolean(destPinId && el.id === `legend-${destPinId}`));
+    });
+  }
+
+  function renderFloatingPinCard(pinId) {
+    const pin = DATA.map.pins.find((p) => p.id === pinId);
+    const inlineCard = document.getElementById("map-floating-card");
+    const lightboxCard = document.getElementById("lightbox-floating-card");
+    const cards = [inlineCard, lightboxCard].filter(Boolean);
+
+    if (!pin) {
+      state.activePinId = null;
+      cards.forEach((c) => c.classList.add("hidden"));
+      document.querySelectorAll(".map-pin-marker.is-highlighted, .legend-item.is-highlighted").forEach((el) => {
+        el.classList.remove("is-highlighted");
+      });
+      return;
+    }
+
+    state.activePinId = pin.id;
+    const activeMajor = getActiveMajor();
+    const isUserDestination = Boolean(activeMajor && activeMajor.mapPinId === pin.id);
+
+    // تعیین دانشکده هدف برای دکمه «مشاهده برنامه این دانشکده»
+    let targetFacultyId = pin.facultyId || null;
+    if (activeMajor && pin.relatedFaculties && pin.relatedFaculties.includes(activeMajor.facultyId)) {
+      targetFacultyId = activeMajor.facultyId;
+    }
+
+    document.querySelectorAll(".map-pin-marker").forEach((el) => {
+      el.classList.toggle("is-highlighted", el.dataset.pinId === pin.id);
+    });
+    document.querySelectorAll(".legend-item").forEach((el) => {
+      el.classList.toggle("is-highlighted", el.id === `legend-${pin.id}`);
+    });
+
+    const cardMarkup = `
+      <div class="floating-card-head">
+        <div class="floating-card-title-row">
+          <span class="floating-pin-num">${toFaDigits(pin.number)}</span>
+          <h4 class="floating-card-name">${toFaDigits(pin.name)}</h4>
+          ${isUserDestination ? `<span class="floating-dest-badge">مقصد ثبت‌نام شما</span>` : ""}
+        </div>
+        <button type="button" class="floating-card-close" aria-label="بستن اطلاعات ساختمان">${ICONS.close}</button>
+      </div>
+      ${pin.address ? `<p class="floating-card-address">${ICONS.mapPin}<span>${toFaDigits(pin.address)}</span></p>` : ""}
+      <p class="floating-card-desc">${toFaDigits(pin.desc)}</p>
+      ${
+        targetFacultyId
+          ? `
+        <div class="floating-card-actions">
+          <button type="button" class="floating-faculty-btn" data-jump-faculty="${targetFacultyId}">
+            ${ICONS.calendar}
+            <span>مشاهده برنامه این دانشکده</span>
+          </button>
+        </div>
+      `
+          : ""
+      }
+    `;
+
+    cards.forEach((c) => {
+      c.innerHTML = cardMarkup;
+      c.classList.remove("hidden");
+
+      const closeBtn = c.querySelector(".floating-card-close");
+      if (closeBtn) {
+        closeBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          renderFloatingPinCard(null);
+        });
+      }
+
+      const facBtn = c.querySelector("[data-jump-faculty]");
+      if (facBtn) {
+        facBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          const facId = facBtn.dataset.jumpFaculty;
+          state.selectedFacultyId = facId;
+          try {
+            localStorage.setItem(STORAGE_KEYS.faculty, facId);
+          } catch {
+            // ignore
+          }
+          renderFacultySelector();
+          renderStepper();
+
+          // اگر لایت‌باکس باز بود ابتدا بسته شود
+          const lb = document.getElementById("map-lightbox");
+          if (lb && !lb.hidden) {
+            lb.hidden = true;
+            document.body.style.overflow = "";
+          }
+
+          const stepperSec = document.getElementById("section-stepper");
+          if (stepperSec) stepperSec.scrollIntoView({ behavior: "smooth", block: "start" });
+        });
+      }
+    });
+  }
+
+  function focusMapPin(pinId, scrollToMap) {
+    renderFloatingPinCard(pinId);
+    if (scrollToMap) {
+      const mapPreview = document.getElementById("map-preview-shell");
+      if (mapPreview) {
+        mapPreview.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+    }
+  }
+
+  function renderPinsLayer(containerEl) {
     if (!containerEl) return;
     containerEl.innerHTML = "";
 
@@ -921,8 +1389,7 @@
 
       btn.addEventListener("click", (e) => {
         e.stopPropagation();
-        highlightMapPin(pin.id, isLightbox ? "none" : "legend");
-        showToast(`${toFaDigits(pin.number)}. ${pin.name}`);
+        renderFloatingPinCard(pin.id);
       });
 
       containerEl.appendChild(btn);
@@ -960,8 +1427,8 @@
     applySrc(previewImg);
     applySrc(lightboxImg);
 
-    renderPinsLayer(document.getElementById("map-pins-layer"), false);
-    renderPinsLayer(document.getElementById("lightbox-pins-layer"), true);
+    renderPinsLayer(document.getElementById("map-pins-layer"));
+    renderPinsLayer(document.getElementById("lightbox-pins-layer"));
 
     const legendList = document.getElementById("map-legend-list");
     legendList.innerHTML = "";
@@ -980,7 +1447,7 @@
         </div>
       `;
 
-      const selectPin = () => highlightMapPin(pin.id, "map");
+      const selectPin = () => focusMapPin(pin.id, true);
       li.addEventListener("click", selectPin);
       li.addEventListener("keydown", (e) => {
         if (e.key === "Enter" || e.key === " ") {
@@ -990,6 +1457,224 @@
       });
 
       legendList.appendChild(li);
+    });
+
+    updateMapDestinationHighlight();
+  }
+
+  // کنترلر Pinch-to-Zoom و Pan امن (در scale === 1 اسکرول عمودی صفحه هرگز گیر نمی‌کند)
+  function createMapController(viewportEl, stageEl, options) {
+    const isFullscreen = Boolean(options && options.isFullscreen);
+    const onZoomChange = options && options.onZoomChange;
+    let scale = 1;
+    let tx = 0;
+    let ty = 0;
+
+    function clampTranslation() {
+      if (scale <= 1) {
+        tx = 0;
+        ty = 0;
+        return;
+      }
+      const vw = viewportEl.clientWidth || 1;
+      const vh = viewportEl.clientHeight || 1;
+      const maxX = Math.max(0, (vw * (scale - 1)) / 2 + 24);
+      const maxY = Math.max(0, (vh * (scale - 1)) / 2 + 24);
+      tx = Math.max(-maxX, Math.min(maxX, tx));
+      ty = Math.max(-maxY, Math.min(maxY, ty));
+    }
+
+    function applyTransform() {
+      clampTranslation();
+      stageEl.style.transform = `translate3d(${tx}px, ${ty}px, 0) scale(${scale})`;
+      // مقیاس معکوس برای جلوگیری از غول‌پیکر شدن پین‌ها هنگام زوم
+      stageEl.style.setProperty("--map-pin-scale", String(+(1 / Math.sqrt(scale)).toFixed(3)));
+      viewportEl.classList.toggle("is-zoomed", scale > 1 || isFullscreen);
+      if (onZoomChange) onZoomChange(scale);
+    }
+
+    function setScale(nextScale) {
+      scale = Math.max(1, Math.min(3, +nextScale.toFixed(2)));
+      if (scale <= 1.02) {
+        scale = 1;
+        tx = 0;
+        ty = 0;
+      }
+      applyTransform();
+    }
+
+    function reset() {
+      scale = 1;
+      tx = 0;
+      ty = 0;
+      applyTransform();
+    }
+
+    // Pinch-to-Zoom دو انگشتی + Drag تک‌انگشتی فقط وقتی scale > 1 یا Fullscreen است
+    let pinchStartDist = 0;
+    let pinchStartScale = 1;
+    let panStartX = 0;
+    let panStartY = 0;
+    let panOriginTx = 0;
+    let panOriginTy = 0;
+    let isTouchPanning = false;
+    let lastTapTime = 0;
+
+    function getTouchDist(t1, t2) {
+      return Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+    }
+
+    viewportEl.addEventListener(
+      "touchstart",
+      (e) => {
+        if (e.target.closest(".map-pin-marker") || e.target.closest(".map-floating-card")) return;
+
+        if (e.touches.length === 2) {
+          e.preventDefault();
+          isTouchPanning = false;
+          pinchStartDist = getTouchDist(e.touches[0], e.touches[1]);
+          pinchStartScale = scale;
+        } else if (e.touches.length === 1) {
+          const now = Date.now();
+          if (now - lastTapTime < 280) {
+            e.preventDefault();
+            setScale(scale > 1 ? 1 : 2);
+            lastTapTime = 0;
+            return;
+          }
+          lastTapTime = now;
+
+          // فقط وقتی زوم شده یا تمام‌صفحه است، Drag تک‌انگشتی فعال شود (جلوگیری از تله اسکرول)
+          if (scale > 1 || isFullscreen) {
+            isTouchPanning = true;
+            panStartX = e.touches[0].clientX;
+            panStartY = e.touches[0].clientY;
+            panOriginTx = tx;
+            panOriginTy = ty;
+          }
+        }
+      },
+      { passive: false }
+    );
+
+    viewportEl.addEventListener(
+      "touchmove",
+      (e) => {
+        if (e.touches.length === 2 && pinchStartDist > 0) {
+          e.preventDefault();
+          const dist = getTouchDist(e.touches[0], e.touches[1]);
+          setScale(pinchStartScale * (dist / pinchStartDist));
+        } else if (e.touches.length === 1 && isTouchPanning && (scale > 1 || isFullscreen)) {
+          e.preventDefault();
+          tx = panOriginTx + (e.touches[0].clientX - panStartX);
+          ty = panOriginTy + (e.touches[0].clientY - panStartY);
+          applyTransform();
+        }
+      },
+      { passive: false }
+    );
+
+    viewportEl.addEventListener("touchend", (e) => {
+      if (e.touches.length < 2) pinchStartDist = 0;
+      if (e.touches.length === 0) isTouchPanning = false;
+    });
+
+    // کشیدن با ماوس روی دسکتاپ وقتی زوم شده یا تمام‌صفحه است
+    let isMousePanning = false;
+    viewportEl.addEventListener("mousedown", (e) => {
+      if (e.target.closest(".map-pin-marker") || e.target.closest(".map-floating-card")) return;
+      if (scale <= 1 && !isFullscreen) return;
+      isMousePanning = true;
+      viewportEl.classList.add("is-dragging");
+      panStartX = e.clientX;
+      panStartY = e.clientY;
+      panOriginTx = tx;
+      panOriginTy = ty;
+    });
+
+    window.addEventListener("mousemove", (e) => {
+      if (!isMousePanning) return;
+      e.preventDefault();
+      tx = panOriginTx + (e.clientX - panStartX);
+      ty = panOriginTy + (e.clientY - panStartY);
+      applyTransform();
+    });
+
+    window.addEventListener("mouseup", () => {
+      if (!isMousePanning) return;
+      isMousePanning = false;
+      viewportEl.classList.remove("is-dragging");
+    });
+
+    applyTransform();
+
+    return {
+      zoomIn: () => setScale(scale + 0.4),
+      zoomOut: () => setScale(scale - 0.4),
+      reset,
+      getScale: () => scale
+    };
+  }
+
+  function initInteractiveMaps() {
+    const inlineViewport = document.getElementById("inline-map-viewport");
+    const inlineStage = document.getElementById("inline-map-stage");
+    const inlineResetBtn = document.getElementById("inline-zoom-reset-btn");
+    const tapHint = document.getElementById("map-tap-hint");
+
+    const inlineCtrl = createMapController(inlineViewport, inlineStage, {
+      isFullscreen: false,
+      onZoomChange: (s) => {
+        if (inlineResetBtn) inlineResetBtn.classList.toggle("hidden", s <= 1);
+        if (tapHint) tapHint.classList.toggle("hidden", s > 1);
+      }
+    });
+
+    document.getElementById("inline-zoom-in-btn").addEventListener("click", () => inlineCtrl.zoomIn());
+    document.getElementById("inline-zoom-out-btn").addEventListener("click", () => inlineCtrl.zoomOut());
+    document.getElementById("inline-zoom-reset-btn").addEventListener("click", () => inlineCtrl.reset());
+
+    // لایت‌باکس تمام‌صفحه
+    const lightbox = document.getElementById("map-lightbox");
+    const openBtn = document.getElementById("open-lightbox-btn");
+    const inlineFsBtn = document.getElementById("inline-fullscreen-btn");
+    const closeBtn = document.getElementById("lightbox-close-btn");
+    const zoomText = document.getElementById("zoom-level-text");
+    const lbViewport = document.getElementById("lightbox-viewport");
+    const lbStage = document.getElementById("lightbox-stage");
+
+    const lbCtrl = createMapController(lbViewport, lbStage, {
+      isFullscreen: true,
+      onZoomChange: (s) => {
+        if (zoomText) zoomText.textContent = `${toFaDigits(Math.round(s * 100))}٪`;
+      }
+    });
+
+    function openLightbox() {
+      lbCtrl.reset();
+      lightbox.hidden = false;
+      document.body.style.overflow = "hidden";
+      closeBtn.focus();
+    }
+
+    function closeLightbox() {
+      lightbox.hidden = true;
+      document.body.style.overflow = "";
+      openBtn.focus();
+    }
+
+    openBtn.addEventListener("click", openLightbox);
+    if (inlineFsBtn) inlineFsBtn.addEventListener("click", openLightbox);
+    closeBtn.addEventListener("click", closeLightbox);
+
+    document.getElementById("zoom-in-btn").addEventListener("click", () => lbCtrl.zoomIn());
+    document.getElementById("zoom-out-btn").addEventListener("click", () => lbCtrl.zoomOut());
+    document.getElementById("zoom-reset-btn").addEventListener("click", () => lbCtrl.reset());
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && !lightbox.hidden) {
+        closeLightbox();
+      }
     });
   }
 
@@ -1031,104 +1716,6 @@
       </div>
       <div class="extra-addresses-grid">${cardsHtml}</div>
     `;
-  }
-
-  function initLightbox() {
-    const lightbox = document.getElementById("map-lightbox");
-    const openBtn = document.getElementById("open-lightbox-btn");
-    const previewTrigger = document.getElementById("map-preview-trigger");
-    const closeBtn = document.getElementById("lightbox-close-btn");
-    const zoomInBtn = document.getElementById("zoom-in-btn");
-    const zoomOutBtn = document.getElementById("zoom-out-btn");
-    const zoomResetBtn = document.getElementById("zoom-reset-btn");
-    const zoomText = document.getElementById("zoom-level-text");
-    const viewport = document.getElementById("lightbox-viewport");
-    const stage = document.getElementById("lightbox-stage");
-
-    function updateZoom() {
-      const pct = Math.round(state.zoom * 100);
-      zoomText.textContent = `${toFaDigits(pct)}٪`;
-      stage.style.width = `${pct}%`;
-      stage.style.maxWidth = state.zoom > 1 ? "none" : "1100px";
-    }
-
-    function openLightbox() {
-      state.zoom = 1;
-      updateZoom();
-      lightbox.hidden = false;
-      document.body.style.overflow = "hidden";
-      closeBtn.focus();
-    }
-
-    function closeLightbox() {
-      lightbox.hidden = true;
-      document.body.style.overflow = "";
-      openBtn.focus();
-    }
-
-    openBtn.addEventListener("click", openLightbox);
-    previewTrigger.addEventListener("click", openLightbox);
-    previewTrigger.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" || e.key === " ") {
-        e.preventDefault();
-        openLightbox();
-      }
-    });
-    closeBtn.addEventListener("click", closeLightbox);
-
-    zoomInBtn.addEventListener("click", () => {
-      state.zoom = Math.min(3, +(state.zoom + 0.35).toFixed(2));
-      updateZoom();
-    });
-
-    zoomOutBtn.addEventListener("click", () => {
-      state.zoom = Math.max(0.8, +(state.zoom - 0.35).toFixed(2));
-      updateZoom();
-    });
-
-    zoomResetBtn.addEventListener("click", () => {
-      state.zoom = 1;
-      updateZoom();
-      viewport.scrollTo({ top: 0, left: 0, behavior: "smooth" });
-    });
-
-    document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape" && !lightbox.hidden) {
-        closeLightbox();
-      }
-    });
-
-    // جابه‌جایی نقشه با کشیدن ماوس (Pan)
-    let isDragging = false;
-    let startX = 0;
-    let startY = 0;
-    let scrollLeft = 0;
-    let scrollTop = 0;
-
-    viewport.addEventListener("mousedown", (e) => {
-      isDragging = true;
-      viewport.classList.add("is-dragging");
-      startX = e.pageX - viewport.offsetLeft;
-      startY = e.pageY - viewport.offsetTop;
-      scrollLeft = viewport.scrollLeft;
-      scrollTop = viewport.scrollTop;
-    });
-
-    viewport.addEventListener("mousemove", (e) => {
-      if (!isDragging) return;
-      e.preventDefault();
-      const x = e.pageX - viewport.offsetLeft;
-      const y = e.pageY - viewport.offsetTop;
-      viewport.scrollLeft = scrollLeft - (x - startX);
-      viewport.scrollTop = scrollTop - (y - startY);
-    });
-
-    const stopDrag = () => {
-      isDragging = false;
-      viewport.classList.remove("is-dragging");
-    };
-    viewport.addEventListener("mouseup", stopDrag);
-    viewport.addEventListener("mouseleave", stopDrag);
   }
 
   function renderAssociations() {
@@ -1300,16 +1887,18 @@
   // ==========================================================================
   function init() {
     renderHeaderAndFooter();
+    renderMyPathCard();
     renderTimeline();
     renderOfficialNotice();
     renderProfileBuilder();
     initChecklistControls();
     renderChecklist();
+    updateBottomNavBadge();
     renderFacultySelector();
     renderStepper();
     renderMapAndLegend();
     renderExtraAddresses();
-    initLightbox();
+    initInteractiveMaps();
     renderAssociations();
     renderStatusBoard();
     initFaqSearch();
