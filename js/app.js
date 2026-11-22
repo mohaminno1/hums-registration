@@ -13,7 +13,6 @@
 
   const STORAGE_KEYS = {
     checklist: `reg_guide_${DATA.storageVersion}_checklist`,
-    conditions: `reg_guide_${DATA.storageVersion}_conditions`,
     steps: `reg_guide_${DATA.storageVersion}_steps`,
     faculty: `reg_guide_${DATA.storageVersion}_faculty`
   };
@@ -80,7 +79,6 @@
   // وضعیت برنامه
   const state = {
     checkedDocs: loadStoredSet(STORAGE_KEYS.checklist),
-    activeConditions: loadStoredSet(STORAGE_KEYS.conditions),
     doneSteps: loadStoredSet(STORAGE_KEYS.steps),
     selectedFacultyId: loadStoredFaculty(),
     checklistFilter: "all",
@@ -95,7 +93,6 @@
     info: `<svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>`,
     mapPin: `<svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>`,
     check: `<svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>`,
-    plus: `<svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>`,
     copy: `<svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`,
     external: `<svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>`,
     chevron: `<svg class="icon faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>`,
@@ -415,116 +412,41 @@
     return li;
   }
 
-  function getConditionDocCount(condId) {
-    return DATA.checklist.filter((item) => {
-      if (item.condition !== condId) return false;
-      const isExcluded = item.excludeWhen && item.excludeWhen.some((c) => state.activeConditions.has(c));
-      return !isExcluded;
-    }).length;
-  }
-
-  function renderChecklistConditions() {
-    const box = document.getElementById("checklist-conditions-box");
-    if (!box || !DATA.checklistConditions || !DATA.checklistConditions.length) return;
-
-    box.innerHTML = `
-      <div class="conditions-header">
-        <div class="conditions-label">۱. شرایط خود را انتخاب کنید (امکان انتخاب چند گزینه همزمان):</div>
-        <p class="conditions-subtitle">مدارک الزامی پایه به صورت خودکار برای همه فعال است. اگر هر یک از شرایط زیر را دارید، رویش کلیک کنید تا مدارکش به چک‌لیست شما اضافه شود:</p>
-      </div>
-      <div class="mandatory-lock-badge">
-        ${ICONS.check}
-        <span>مدارک پایه برای همه فعال است</span>
-      </div>
-      <div class="conditions-chips" role="group" aria-label="انتخاب شرایط پذیرش من">
-        ${DATA.checklistConditions
-          .map((cond) => {
-            const selected = state.activeConditions.has(cond.id);
-            const count = getConditionDocCount(cond.id);
-            return `
-              <button type="button" class="condition-chip${selected ? " is-selected" : ""}" data-condition-id="${cond.id}" aria-pressed="${selected}">
-                <span class="condition-chip-main">
-                  ${selected ? ICONS.check : ICONS.plus}
-                  <span>
-                    <span class="condition-chip-title">${toFaDigits(cond.label)}</span>
-                    ${cond.hint ? `<span class="condition-chip-hint">${toFaDigits(cond.hint)}</span>` : ""}
-                  </span>
-                </span>
-                <span class="condition-chip-count">+${toFaDigits(count)} مدرک</span>
-              </button>
-            `;
-          })
-          .join("")}
-      </div>
-    `;
-
-    box.querySelectorAll("[data-condition-id]").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const id = btn.dataset.conditionId;
-        if (state.activeConditions.has(id)) {
-          state.activeConditions.delete(id);
-        } else {
-          state.activeConditions.add(id);
-        }
-        saveStoredSet(STORAGE_KEYS.conditions, state.activeConditions);
-        renderChecklistConditions();
-        renderChecklist();
-      });
-    });
-  }
-
   function renderChecklist() {
     const listEl = document.getElementById("checklist-list");
     const emptyEl = document.getElementById("checklist-empty");
-
-    // ۱. فقط آیتم‌هایی که مربوط به شرایط انتخاب‌شده همین کاربر هستند (با اعمال excludeWhen):
-    const applicableItems = DATA.checklist.filter((item) => {
-      const isExcluded = item.excludeWhen && item.excludeWhen.some((c) => state.activeConditions.has(c));
-      if (isExcluded) return false;
-      return item.condition === "mandatory" || state.activeConditions.has(item.condition);
-    });
-
-    // ۲. تعداد تیک‌خورده‌ها دقیقاً اشتراک (Intersection) با applicableItems است:
-    const applicableTotalCount = applicableItems.length;
-    const applicableCompletedCount = applicableItems.filter((item) =>
-      state.checkedDocs.has(item.id)
-    ).length;
-    const progressPercent =
-      applicableTotalCount === 0
-        ? 0
-        : Math.round((applicableCompletedCount / applicableTotalCount) * 100);
+    const total = DATA.checklist.length;
+    const completed = DATA.checklist.filter((item) => state.checkedDocs.has(item.id)).length;
+    const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
 
     document.getElementById("checklist-progress-text").textContent =
-      `${toFaDigits(applicableCompletedCount)} از ${toFaDigits(applicableTotalCount)} مورد آماده شده`;
-    document.getElementById("checklist-progress-percent").textContent = `${toFaDigits(progressPercent)}٪`;
-    document.getElementById("checklist-progress-fill").style.width = `${progressPercent}%`;
-    document.getElementById("checklist-progressbar").setAttribute("aria-valuenow", String(progressPercent));
+      `${toFaDigits(completed)} از ${toFaDigits(total)} مورد آماده شده`;
+    document.getElementById("checklist-progress-percent").textContent = `${toFaDigits(percent)}٪`;
+    document.getElementById("checklist-progress-fill").style.width = `${percent}%`;
+    document.getElementById("checklist-progressbar").setAttribute("aria-valuenow", String(percent));
 
-    // ۳. لایه دوم — فیلتر نمایش (همه / باقیمانده / آماده‌شده) فقط روی displayedItems اعمال می‌شود:
-    const displayedItems = applicableItems.filter((item) => {
-      if (state.checklistFilter === "remaining") return !state.checkedDocs.has(item.id);
-      if (state.checklistFilter === "completed") return state.checkedDocs.has(item.id);
+    const filtered = DATA.checklist.filter((item) => {
+      if (state.checklistFilter === "core") {
+        return !item.optional;
+      }
+      if (state.checklistFilter === "remaining") {
+        return !state.checkedDocs.has(item.id);
+      }
       return true;
     });
 
     listEl.innerHTML = "";
-    emptyEl.classList.toggle("hidden", displayedItems.length > 0);
-    if (displayedItems.length === 0) {
-      emptyEl.textContent =
-        state.checklistFilter === "completed"
-          ? "هنوز موردی را تیک نزده‌اید."
-          : "همه موارد چک‌لیست شما آماده شده‌اند.";
-    }
+    emptyEl.classList.toggle("hidden", filtered.length > 0);
 
     let lastGroup = null;
-    displayedItems.forEach((item) => {
+    filtered.forEach((item) => {
       if (item.group && item.group !== lastGroup) {
         lastGroup = item.group;
         const groupLi = document.createElement("li");
         groupLi.className = "checklist-group-header";
         groupLi.innerHTML = `
           <span>${toFaDigits(item.group)}</span>
-          ${item.condition !== "mandatory" ? `<span class="checklist-group-optional">انتخاب‌شده توسط شما</span>` : ""}
+          ${item.optional ? `<span class="checklist-group-optional">در صورت شمول</span>` : ""}
         `;
         listEl.appendChild(groupLi);
       }
@@ -712,8 +634,7 @@
           <div class="faculty-venue-note${active.venueWarning ? " is-warning" : ""}">
             ${active.venueWarning ? ICONS.alert : ICONS.mapPin}
             <div>
-              <div><strong>${active.label}:</strong> ${toFaDigits(active.venueNote)}</div>
-              ${active.address ? `<div class="faculty-address"><strong>آدرس کامل:</strong> ${toFaDigits(active.address)}</div>` : ""}
+              <strong>${active.label}:</strong> ${toFaDigits(active.venueNote)}
             </div>
           </div>
           ${
@@ -1201,7 +1122,6 @@
     renderTimeline();
     renderOfficialNotice();
     initChecklistControls();
-    renderChecklistConditions();
     renderChecklist();
     renderFacultySelector();
     renderStepper();

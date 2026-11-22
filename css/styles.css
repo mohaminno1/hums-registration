@@ -484,140 +484,7 @@ input:focus-visible {
   border-block-end: 1px solid var(--border-subtle);
   display: flex;
   flex-direction: column;
-  gap: 14px;
-}
-
-.checklist-conditions-box {
-  padding: 14px;
-  background-color: var(--bg-soft);
-  border: 1px solid var(--border-card);
-  border-radius: var(--radius-sm);
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.conditions-header {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.conditions-label {
-  font-size: 0.88rem;
-  font-weight: 800;
-  color: var(--text-primary);
-}
-
-.conditions-subtitle {
-  margin: 0;
-  font-size: 0.81rem;
-  color: var(--text-secondary);
-  line-height: 1.65;
-}
-
-.mandatory-lock-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  align-self: flex-start;
-  padding: 4px 10px;
-  background-color: var(--status-confirmed-bg);
-  color: var(--status-confirmed-fg);
-  border: 1px solid #C3E3D0;
-  border-radius: var(--radius-pill);
-  font-size: 0.77rem;
-  font-weight: 700;
-}
-
-.conditions-chips {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 8px;
-}
-
-@media (min-width: 520px) {
-  .conditions-chips {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-.condition-chip {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 8px;
-  min-height: 46px;
-  padding: 9px 11px;
-  background-color: var(--bg-card);
-  border: 1px solid var(--border-card);
-  border-radius: var(--radius-sm);
-  text-align: start;
-  cursor: pointer;
-  transition: background-color 0.16s var(--ease), color 0.16s var(--ease), border-color 0.16s var(--ease);
-}
-
-.condition-chip:hover {
-  border-color: var(--accent);
-}
-
-.condition-chip-main {
-  display: flex;
-  align-items: flex-start;
-  gap: 7px;
-  min-width: 0;
-}
-
-.condition-chip-main .icon {
-  margin-block-start: 2px;
-  color: var(--accent);
-}
-
-.condition-chip-title {
-  display: block;
-  font-size: 0.82rem;
-  font-weight: 700;
-  color: var(--text-primary);
-  line-height: 1.45;
-}
-
-.condition-chip-hint {
-  display: block;
-  font-size: 0.74rem;
-  color: var(--text-secondary);
-  line-height: 1.5;
-  margin-block-start: 2px;
-}
-
-.condition-chip-count {
-  font-size: 0.72rem;
-  font-weight: 700;
-  padding: 2px 7px;
-  border-radius: var(--radius-pill);
-  background-color: var(--accent-tint);
-  color: var(--accent);
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-
-.condition-chip.is-selected {
-  background-color: var(--accent);
-  border-color: var(--accent);
-  color: #FFFFFF;
-}
-
-.condition-chip.is-selected .condition-chip-main .icon,
-.condition-chip.is-selected .condition-chip-title {
-  color: #FFFFFF;
-}
-
-.condition-chip.is-selected .condition-chip-hint {
-  color: rgba(255, 255, 255, 0.85);
-}
-
-.condition-chip.is-selected .condition-chip-count {
-  background-color: rgba(255, 255, 255, 0.2);
-  color: #FFFFFF;
+  gap: 12px;
 }
 
 .progress-meta {
@@ -894,60 +761,17 @@ input:focus-visible {
 }
 
 .faculty-venue-note {
-  padding: 11px 13px;
+  padding: 9px 12px;
   background-color: var(--accent-tint);
   border-inline-start: 3px solid var(--accent);
-  border-radius: 6px;
+  border-radius: 5px;
   font-size: 0.84rem;
   color: var(--text-primary);
   line-height: 1.7;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
 }
 
 .faculty-venue-note strong {
   color: var(--accent);
-}
-
-.faculty-address {
-  font-size: 0.83rem;
-  color: var(--text-primary);
-  padding-block-start: 6px;
-  border-block-start: 1px solid #D3E3E8;
-}
-
-.faculty-schedule-list {
-  list-style: none;
-  margin: 0;
-  padding: 6px 0 0;
-  border-block-start: 1px solid #D3E3E8;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.faculty-schedule-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 6px 10px;
-  background-color: var(--bg-card);
-  border: 1px solid #D3E3E8;
-  border-radius: 5px;
-  padding: 6px 10px;
-}
-
-.schedule-day {
-  font-weight: 800;
-  font-size: 0.8rem;
-  color: var(--accent);
-  white-space: nowrap;
-}
-
-.schedule-majors {
-  font-size: 0.83rem;
-  color: var(--text-primary);
 }
 
 /* کادر هشدار آجری اختصاصی */
@@ -1878,7 +1702,7 @@ input:focus-visible {
    ۷. استایل‌های افزوده‌شده: برندینگ، تایملاین، جدول شهریه، برنامه دانشکده و فوتر
    ========================================================================== */
 
-/* --- هدر و بج شورای صنفی --- */
+/* --- هدر و بج کارگروه آموزشی شورای صنفی --- */
 .header-top {
   align-items: flex-start;
 }
