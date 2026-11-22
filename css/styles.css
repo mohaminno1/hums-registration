@@ -627,10 +627,67 @@ input:focus-visible {
 }
 
 .checklist-subnote {
-  margin: 3px 0 0;
+  margin: 4px 0 0;
   font-size: 0.85rem;
   color: var(--text-secondary);
+  line-height: 1.75;
+}
+
+.checklist-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-block-start: 8px;
+  padding: 4px 10px;
+  background-color: var(--accent-tint);
+  border: 1px solid #C6DCE2;
+  border-radius: var(--radius-sm);
+  color: var(--accent);
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-decoration: none;
+  direction: ltr;
+  transition: background-color 0.16s var(--ease), color 0.16s var(--ease), border-color 0.16s var(--ease);
+}
+
+.checklist-link:hover {
+  background-color: var(--accent);
+  border-color: var(--accent);
+  color: #FFFFFF;
+}
+
+/* کادر انتخاب دانشکده بالای مسیر ثبت‌نام */
+.faculty-selector-card {
+  padding: 14px 16px;
+  margin-block-end: 18px;
+}
+
+.faculty-selector-label {
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-block-end: 10px;
+}
+
+.faculty-chips-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-block-end: 10px;
+}
+
+.faculty-venue-note {
+  padding: 9px 12px;
+  background-color: var(--accent-tint);
+  border-inline-start: 3px solid var(--accent);
+  border-radius: 5px;
+  font-size: 0.84rem;
+  color: var(--text-primary);
   line-height: 1.7;
+}
+
+.faculty-venue-note strong {
+  color: var(--accent);
 }
 
 /* کادر هشدار آجری اختصاصی */

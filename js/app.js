@@ -13,7 +13,8 @@
 
   const STORAGE_KEYS = {
     checklist: `reg_guide_${DATA.storageVersion}_checklist`,
-    steps: `reg_guide_${DATA.storageVersion}_steps`
+    steps: `reg_guide_${DATA.storageVersion}_steps`,
+    faculty: `reg_guide_${DATA.storageVersion}_faculty`
   };
 
   // تبدیل تمام ارقام لاتین به ارقام فارسی
@@ -42,10 +43,23 @@
     }
   }
 
+  function loadStoredFaculty() {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.faculty);
+      if (saved && DATA.faculties && DATA.faculties.some((f) => f.id === saved)) {
+        return saved;
+      }
+    } catch {
+      // ignore
+    }
+    return DATA.faculties && DATA.faculties.length ? DATA.faculties[0].id : null;
+  }
+
   // وضعیت برنامه
   const state = {
     checkedDocs: loadStoredSet(STORAGE_KEYS.checklist),
     doneSteps: loadStoredSet(STORAGE_KEYS.steps),
+    selectedFacultyId: loadStoredFaculty(),
     checklistFilter: "all",
     faqQuery: "",
     zoom: 1
@@ -211,15 +225,21 @@
       const li = document.createElement("li");
       li.className = `checklist-item${checked ? " is-checked" : ""}`;
 
+      const badgeText = item.guide || item.qty || "";
       li.innerHTML = `
         <label class="checklist-label">
           <input type="checkbox" class="checklist-checkbox" data-doc-id="${item.id}" ${checked ? "checked" : ""} />
           <div class="checklist-body">
             <div class="checklist-title-row">
               <span class="checklist-title">${toFaDigits(item.title)}</span>
-              ${item.qty ? `<span class="checklist-qty">${toFaDigits(item.qty)}</span>` : ""}
+              ${badgeText ? `<span class="checklist-qty">${toFaDigits(badgeText)}</span>` : ""}
             </div>
             ${item.subNote ? `<p class="checklist-subnote">${toFaDigits(item.subNote)}</p>` : ""}
+            ${
+              item.linkUrl
+                ? `<a href="${item.linkUrl}" target="_blank" rel="noopener noreferrer" class="checklist-link" onclick="event.stopPropagation()">${ICONS.external}<span>${item.linkText || item.linkUrl}</span></a>`
+                : ""
+            }
             ${
               item.warning
                 ? `<div class="alert-callout" role="note">${ICONS.alert}<span>${toFaDigits(item.warning)}</span></div>`
@@ -295,6 +315,45 @@
     }, 2600);
   }
 
+  function getActiveFaculty() {
+    if (!DATA.faculties || !DATA.faculties.length) return null;
+    return DATA.faculties.find((f) => f.id === state.selectedFacultyId) || DATA.faculties[0];
+  }
+
+  function renderFacultySelector() {
+    const box = document.getElementById("faculty-selector-box");
+    if (!box || !DATA.faculties || !DATA.faculties.length) return;
+    const active = getActiveFaculty();
+
+    box.innerHTML = `
+      <div class="faculty-selector-label">رشته / دانشکده قبولی خود را انتخاب کنید تا محل دقیق ثبت‌نام حضوری نمایش داده شود:</div>
+      <div class="faculty-chips-row" role="group" aria-label="انتخاب دانشکده">
+        ${DATA.faculties
+          .map(
+            (f) =>
+              `<button type="button" class="chip-btn${f.id === active.id ? " is-active" : ""}" data-faculty-id="${f.id}">${f.label}</button>`
+          )
+          .join("")}
+      </div>
+      <div class="faculty-venue-note">
+        <strong>محل ثبت‌نام حضوری (${active.label}):</strong> ${toFaDigits(active.venueNote)}
+      </div>
+    `;
+
+    box.querySelectorAll("[data-faculty-id]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        state.selectedFacultyId = btn.dataset.facultyId;
+        try {
+          localStorage.setItem(STORAGE_KEYS.faculty, state.selectedFacultyId);
+        } catch {
+          // ignore
+        }
+        renderFacultySelector();
+        renderStepper();
+      });
+    });
+  }
+
   function renderStepper() {
     const listEl = document.getElementById("stepper-list");
     const total = DATA.steps.length;
@@ -302,12 +361,23 @@
     document.getElementById("stepper-progress-text").textContent =
       `${toFaDigits(doneCount)} از ${toFaDigits(total)} مرحله انجام شده`;
 
+    const activeFaculty = getActiveFaculty();
     listEl.innerHTML = "";
 
     DATA.steps.forEach((step, idx) => {
       const isDone = state.doneSteps.has(step.id);
       const li = document.createElement("li");
       li.className = `step-item${isDone ? " is-done" : ""}`;
+
+      let resolvedLocation = step.location || "";
+      let resolvedPinId = step.mapPinId || null;
+      if (activeFaculty && step.useFacultyVenue === "step1") {
+        resolvedLocation = activeFaculty.step1Location;
+        resolvedPinId = activeFaculty.mapPinId;
+      } else if (activeFaculty && step.useFacultyVenue === "step2") {
+        resolvedLocation = activeFaculty.step2Location;
+        resolvedPinId = activeFaculty.mapPinId;
+      }
 
       li.innerHTML = `
         <div class="step-node" aria-hidden="true">
@@ -320,7 +390,7 @@
               <h3 class="step-title">${toFaDigits(step.title)}</h3>
               <div class="step-location">
                 ${ICONS.mapPin}
-                <span>${toFaDigits(step.location)}</span>
+                <span>${toFaDigits(resolvedLocation)}</span>
               </div>
             </div>
           </div>
@@ -340,8 +410,8 @@
               <span>${isDone ? "انجام شد" : "انجام دادم"}</span>
             </button>
             ${
-              step.mapPinId
-                ? `<button type="button" class="btn-map-jump" data-pin-id="${step.mapPinId}">
+              resolvedPinId
+                ? `<button type="button" class="btn-map-jump" data-pin-id="${resolvedPinId}">
                     ${ICONS.mapPin}
                     <span>نمایش روی نقشه</span>
                   </button>`
@@ -362,8 +432,8 @@
       });
 
       const jumpBtn = li.querySelector(".btn-map-jump");
-      if (jumpBtn) {
-        jumpBtn.addEventListener("click", () => highlightMapPin(step.mapPinId, "map"));
+      if (jumpBtn && resolvedPinId) {
+        jumpBtn.addEventListener("click", () => highlightMapPin(resolvedPinId, "map"));
       }
 
       listEl.appendChild(li);
@@ -707,6 +777,7 @@
     renderHeaderAndFooter();
     initChecklistControls();
     renderChecklist();
+    renderFacultySelector();
     renderStepper();
     renderMapAndLegend();
     initLightbox();
