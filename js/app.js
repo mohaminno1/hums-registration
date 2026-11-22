@@ -13,6 +13,7 @@
 
   const STORAGE_KEYS = {
     checklist: `reg_guide_${DATA.storageVersion}_checklist`,
+    conditions: `reg_guide_${DATA.storageVersion}_conditions`,
     steps: `reg_guide_${DATA.storageVersion}_steps`,
     faculty: `reg_guide_${DATA.storageVersion}_faculty`
   };
@@ -79,6 +80,7 @@
   // وضعیت برنامه
   const state = {
     checkedDocs: loadStoredSet(STORAGE_KEYS.checklist),
+    activeConditions: loadStoredSet(STORAGE_KEYS.conditions),
     doneSteps: loadStoredSet(STORAGE_KEYS.steps),
     selectedFacultyId: loadStoredFaculty(),
     checklistFilter: "all",
@@ -93,6 +95,7 @@
     info: `<svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>`,
     mapPin: `<svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>`,
     check: `<svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>`,
+    plus: `<svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>`,
     copy: `<svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`,
     external: `<svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>`,
     chevron: `<svg class="icon faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>`,
@@ -412,11 +415,48 @@
     return li;
   }
 
+  function renderChecklistConditions() {
+    const box = document.getElementById("checklist-conditions-box");
+    if (!box || !DATA.checklistConditions || !DATA.checklistConditions.length) return;
+
+    box.innerHTML = `
+      <div class="conditions-label">اگر مشمول هرکدام از موارد زیر هستید انتخاب کنید تا به چک‌لیست و نوار پیشرفت شما اضافه شود (امکان چند انتخاب):</div>
+      <div class="conditions-chips" role="group" aria-label="انتخاب شرایط خاص چک‌لیست">
+        ${DATA.checklistConditions
+          .map((cond) => {
+            const selected = state.activeConditions.has(cond.id);
+            return `<button type="button" class="condition-chip${selected ? " is-selected" : ""}" data-condition-id="${cond.id}" aria-pressed="${selected}">${selected ? ICONS.check : ICONS.plus}<span>${toFaDigits(cond.label)}</span></button>`;
+          })
+          .join("")}
+      </div>
+    `;
+
+    box.querySelectorAll("[data-condition-id]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const id = btn.dataset.conditionId;
+        if (state.activeConditions.has(id)) {
+          state.activeConditions.delete(id);
+        } else {
+          state.activeConditions.add(id);
+        }
+        saveStoredSet(STORAGE_KEYS.conditions, state.activeConditions);
+        renderChecklistConditions();
+        renderChecklist();
+      });
+    });
+  }
+
   function renderChecklist() {
     const listEl = document.getElementById("checklist-list");
     const emptyEl = document.getElementById("checklist-empty");
-    const total = DATA.checklist.length;
-    const completed = DATA.checklist.filter((item) => state.checkedDocs.has(item.id)).length;
+
+    // فقط مدارک عمومی + شرایط انتخاب‌شده توسط کاربر در چک‌لیست و نوار پیشرفت محاسبه می‌شوند
+    const activeItems = DATA.checklist.filter(
+      (item) => !item.condition || state.activeConditions.has(item.condition)
+    );
+
+    const total = activeItems.length;
+    const completed = activeItems.filter((item) => state.checkedDocs.has(item.id)).length;
     const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
 
     document.getElementById("checklist-progress-text").textContent =
@@ -425,10 +465,7 @@
     document.getElementById("checklist-progress-fill").style.width = `${percent}%`;
     document.getElementById("checklist-progressbar").setAttribute("aria-valuenow", String(percent));
 
-    const filtered = DATA.checklist.filter((item) => {
-      if (state.checklistFilter === "core") {
-        return !item.optional;
-      }
+    const filtered = activeItems.filter((item) => {
       if (state.checklistFilter === "remaining") {
         return !state.checkedDocs.has(item.id);
       }
@@ -446,7 +483,7 @@
         groupLi.className = "checklist-group-header";
         groupLi.innerHTML = `
           <span>${toFaDigits(item.group)}</span>
-          ${item.optional ? `<span class="checklist-group-optional">در صورت شمول</span>` : ""}
+          ${item.condition ? `<span class="checklist-group-optional">انتخاب‌شده توسط شما</span>` : ""}
         `;
         listEl.appendChild(groupLi);
       }
@@ -634,7 +671,8 @@
           <div class="faculty-venue-note${active.venueWarning ? " is-warning" : ""}">
             ${active.venueWarning ? ICONS.alert : ICONS.mapPin}
             <div>
-              <strong>${active.label}:</strong> ${toFaDigits(active.venueNote)}
+              <div><strong>${active.label}:</strong> ${toFaDigits(active.venueNote)}</div>
+              ${active.address ? `<div class="faculty-address"><strong>آدرس کامل:</strong> ${toFaDigits(active.address)}</div>` : ""}
             </div>
           </div>
           ${
@@ -1122,6 +1160,7 @@
     renderTimeline();
     renderOfficialNotice();
     initChecklistControls();
+    renderChecklistConditions();
     renderChecklist();
     renderFacultySelector();
     renderStepper();

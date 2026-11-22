@@ -113,6 +113,9 @@
 
         <div class="card checklist-card">
           <div class="checklist-toolbar">
+            <!-- انتخاب چندگزینه‌ای شرایط خاص برای شخصی‌سازی چک‌لیست و نوار پیشرفت -->
+            <div class="checklist-conditions-box" id="checklist-conditions-box"></div>
+
             <div class="progress-block">
               <div class="progress-meta">
                 <span class="progress-label" id="checklist-progress-text">۰ از ۰ مورد آماده شده</span>
@@ -125,8 +128,7 @@
 
             <div class="checklist-controls">
               <div class="filter-group" role="group" aria-label="فیلتر مدارک">
-                <button type="button" class="chip-btn is-active" data-checklist-filter="all">همه</button>
-                <button type="button" class="chip-btn" data-checklist-filter="core">الزامی (عمومی)</button>
+                <button type="button" class="chip-btn is-active" data-checklist-filter="all">همه موارد من</button>
                 <button type="button" class="chip-btn" data-checklist-filter="remaining">باقیمانده‌ها</button>
               </div>
               <button type="button" class="btn-text-subtle" id="checklist-reset-btn">
@@ -140,7 +142,7 @@
           </div>
 
           <ul class="checklist-list" id="checklist-list"></ul>
-          <p class="empty-state hidden" id="checklist-empty">همه موارد این لیست آماده شده‌اند.</p>
+          <p class="empty-state hidden" id="checklist-empty">همه موارد چک‌لیست شما آماده شده‌اند.</p>
         </div>
       </section>
 
