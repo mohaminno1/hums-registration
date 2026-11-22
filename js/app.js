@@ -17,10 +17,31 @@
     faculty: `reg_guide_${DATA.storageVersion}_faculty`
   };
 
-  // تبدیل تمام ارقام لاتین به ارقام فارسی
+  // تبدیل تمام ارقام لاتین به ارقام فارسی (برای متن ساده)
   function toFaDigits(input) {
     const fa = ["۰", "۱", "۲", "۳", "۴", "۵", "۶", "۷", "۸", "۹"];
     return String(input).replace(/\d/g, (d) => fa[Number(d)]);
+  }
+
+  // تبدیل ارقام به فارسی فقط در متن خارج از تگ‌های HTML (حفظ کامل href، tel: و کلاس‌ها)
+  function toFaDigitsHtml(html) {
+    return String(html).replace(/(<[^>]+>)|([^<]+)/g, (match, tag, text) => {
+      if (tag) return tag;
+      return toFaDigits(text);
+    });
+  }
+
+  // نرمال‌سازی متن فارسی برای جستجوی دقیق در سوالات متداول
+  function normalizeFa(text) {
+    const faDigits = "۰۱۲۳۴۵۶۷۸۹";
+    return String(text)
+      .replace(/<[^>]+>/g, " ")
+      .replace(/ي/g, "ی")
+      .replace(/ك/g, "ک")
+      .replace(/[\u200c\u200f\u064b-\u065f]/g, "")
+      .replace(/[۰-۹]/g, (d) => String(faDigits.indexOf(d)))
+      .toLowerCase()
+      .trim();
   }
 
   // خواندن و نوشتن ایمن در localStorage
@@ -61,6 +82,7 @@
     doneSteps: loadStoredSet(STORAGE_KEYS.steps),
     selectedFacultyId: loadStoredFaculty(),
     checklistFilter: "all",
+    tuitionTableOpen: false,
     faqQuery: "",
     zoom: 1
   };
@@ -73,7 +95,13 @@
     check: `<svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>`,
     copy: `<svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`,
     external: `<svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>`,
-    chevron: `<svg class="icon faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>`
+    chevron: `<svg class="icon faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>`,
+    phone: `<svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>`,
+    calendar: `<svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>`,
+    userCheck: `<svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><polyline points="17 11 19 13 23 9"></polyline></svg>`,
+    key: `<svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"></path></svg>`,
+    table: `<svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="3" y1="15" x2="21" y2="15"></line><line x1="9" y1="3" x2="9" y2="21"></line></svg>`,
+    sparkle: `<svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8L12 2z"></path></svg>`
   };
 
   // نمایش Toast
@@ -116,15 +144,34 @@
   function renderHeaderAndFooter() {
     document.getElementById("faculty-badge").textContent = DATA.meta.facultyBadge;
     document.getElementById("academic-term").textContent = toFaDigits(DATA.meta.academicTerm);
+
+    const creatorBadgeText = document.getElementById("creator-hero-badge-text");
+    if (creatorBadgeText && DATA.meta.creatorBadge) {
+      creatorBadgeText.textContent = DATA.meta.creatorBadge;
+    }
+
     document.getElementById("site-title").textContent = DATA.meta.title;
-    document.getElementById("site-subtitle").textContent = DATA.meta.subtitle;
-    document.getElementById("footer-note").textContent = DATA.meta.footerNote;
+    document.getElementById("site-subtitle").textContent = toFaDigits(DATA.meta.subtitle);
+
+    const authorEl = document.getElementById("footer-author");
+    const orgEl = document.getElementById("footer-org");
+    const taglineEl = document.getElementById("footer-tagline");
+    const channelBtn = document.getElementById("footer-channel-btn");
+
+    if (authorEl) authorEl.textContent = DATA.meta.footerAuthor;
+    if (orgEl) orgEl.textContent = DATA.meta.footerOrg;
+    if (taglineEl) taglineEl.textContent = toFaDigits(DATA.meta.footerTagline);
+    if (channelBtn && DATA.meta.footerChannelUrl) {
+      channelBtn.href = DATA.meta.footerChannelUrl;
+    }
+
+    document.getElementById("footer-note").textContent = toFaDigits(DATA.meta.footerNote);
 
     const shareBtn = document.getElementById("share-btn");
     shareBtn.addEventListener("click", async () => {
       const shareData = {
-        title: DATA.meta.title,
-        text: `${DATA.meta.title} — ${DATA.meta.facultyBadge}`,
+        title: DATA.meta.shareTitle || DATA.meta.title,
+        text: DATA.meta.shareText || `${DATA.meta.title} — ${DATA.meta.facultyBadge}`,
         url: window.location.href
       };
       if (navigator.share) {
@@ -135,7 +182,8 @@
           if (err && err.name === "AbortError") return;
         }
       }
-      copyToClipboard(window.location.href, "لینک صفحه کپی شد.");
+      const clipboardPayload = `${shareData.text}\n${shareData.url}`;
+      copyToClipboard(clipboardPayload, "متن معرفی و لینک راهنما کپی شد.");
     });
 
     const printBtn = document.getElementById("print-btn");
@@ -143,10 +191,46 @@
   }
 
   // ==========================================================================
+  // ۱-ب. بخش تقویم و تایملاین جامع ثبت‌نام
+  // ==========================================================================
+  function renderTimeline() {
+    const listEl = document.getElementById("registration-timeline-list");
+    const noticeEl = document.getElementById("registration-timeline-notice");
+    const tl = DATA.timeline;
+    if (!listEl || !tl) return;
+
+    listEl.innerHTML = tl.stages
+      .map(
+        (stage) => `
+        <li class="timeline-stage">
+          <div class="timeline-stage-head">
+            <span class="timeline-step-num">${toFaDigits(stage.step)}</span>
+            <span class="timeline-date-pill">${ICONS.calendar}<span>${toFaDigits(stage.date)}</span></span>
+          </div>
+          <h3 class="timeline-stage-title">${toFaDigits(stage.title)}</h3>
+          ${stage.note ? `<p class="timeline-stage-note">${toFaDigits(stage.note)}</p>` : ""}
+        </li>
+      `
+      )
+      .join("");
+
+    if (noticeEl && tl.noticeText) {
+      noticeEl.innerHTML = `
+        ${ICONS.info}
+        <div>
+          <strong>${toFaDigits(tl.noticeTitle)}</strong>
+          <span>${toFaDigits(tl.noticeText)}</span>
+        </div>
+      `;
+    }
+  }
+
+  // ==========================================================================
   // ۲. نوار چسبان Scroll-Spy
   // ==========================================================================
   function initScrollSpy() {
     const sections = [
+      "section-timeline",
       "section-checklist",
       "section-stepper",
       "section-campus",
@@ -195,7 +279,7 @@
   }
 
   // ==========================================================================
-  // ۳. بخش اول: چک‌لیست تعاملی مدارک
+  // ۳. بخش اول: چک‌لیست تعاملی مدارک + جدول شهریه و سفته
   // ==========================================================================
   function renderOfficialNotice() {
     const box = document.getElementById("official-notice-box");
@@ -205,7 +289,7 @@
     const linksHtml = (notice.links || [])
       .map(
         (lnk, i) =>
-          `<a href="${lnk.url}" target="_blank" rel="noopener noreferrer" class="official-link-btn${i > 0 ? " is-secondary" : ""}">${ICONS.external}<span>${lnk.label}</span></a>`
+          `<a href="${lnk.url}" target="_blank" rel="noopener noreferrer" class="official-link-btn${i > 0 ? " is-secondary" : ""}">${ICONS.external}<span>${toFaDigits(lnk.label)}</span></a>`
       )
       .join("");
 
@@ -220,6 +304,112 @@
           : ""
       }
     `;
+  }
+
+  function renderPhoneChips(phones, ext) {
+    const chips = (phones || [])
+      .map(
+        (p) =>
+          `<a href="${p.href}" class="phone-link-chip" dir="ltr">${ICONS.phone}<span>${p.display}</span></a>`
+      )
+      .join("");
+    const extHtml = ext ? `<span class="phone-ext-note">(${toFaDigits(ext)})</span>` : "";
+    return `<div class="phone-links-wrap">${chips}${extHtml}</div>`;
+  }
+
+  function buildTuitionCollapsibleElement() {
+    const tData = DATA.tuitionTable;
+    if (!tData || !tData.rows || !tData.rows.length) return null;
+
+    const li = document.createElement("li");
+    li.className = "checklist-tuition-wrap";
+
+    const isOpen = state.tuitionTableOpen;
+
+    const desktopRows = tData.rows
+      .map(
+        (r) => `
+        <tr>
+          <td class="tuition-major-cell">${toFaDigits(r.major)}</td>
+          <td><span class="tuition-amount-tag">${toFaDigits(r.tuition)}</span></td>
+          <td><span class="promissory-amount-tag">${toFaDigits(r.promissory)}</span></td>
+          <td>
+            ${r.contactPerson ? `<div class="tuition-contact-person">${toFaDigits(r.contactPerson)}</div>` : ""}
+            ${renderPhoneChips(r.phones, r.ext)}
+          </td>
+        </tr>
+      `
+      )
+      .join("");
+
+    const mobileCards = tData.rows
+      .map(
+        (r) => `
+        <div class="tuition-mobile-card">
+          <div class="tuition-mobile-title">${toFaDigits(r.major)}</div>
+          <div class="tuition-mobile-amounts">
+            <div class="tuition-mobile-metric">
+              <span class="metric-label">شهریه علی‌الحساب</span>
+              <span class="tuition-amount-tag">${toFaDigits(r.tuition)}</span>
+            </div>
+            <div class="tuition-mobile-metric">
+              <span class="metric-label">مبلغ سفته</span>
+              <span class="promissory-amount-tag">${toFaDigits(r.promissory)}</span>
+            </div>
+          </div>
+          <div class="tuition-mobile-contact">
+            <span class="metric-label">پیگیری${r.contactPerson ? ` (${toFaDigits(r.contactPerson)})` : ""}:</span>
+            ${renderPhoneChips(r.phones, r.ext)}
+          </div>
+        </div>
+      `
+      )
+      .join("");
+
+    const notesHtml = (tData.notes || [])
+      .map((n) => `<li>${toFaDigits(n)}</li>`)
+      .join("");
+
+    li.innerHTML = `
+      <div class="tuition-accordion${isOpen ? " is-open" : ""}">
+        <button type="button" class="tuition-accordion-trigger" aria-expanded="${isOpen}" aria-controls="tuition-table-panel">
+          <span class="tuition-trigger-title">
+            ${ICONS.table}
+            <span>${toFaDigits(tData.buttonTitle)}</span>
+          </span>
+          ${ICONS.chevron}
+        </button>
+        <div class="tuition-accordion-panel" id="tuition-table-panel">
+          <div class="tuition-accordion-inner">
+            <div class="tuition-table-scroll">
+              <table class="tuition-table">
+                <thead>
+                  <tr>
+                    <th>رشته</th>
+                    <th>شهریه علی‌الحساب</th>
+                    <th>میزان سفته</th>
+                    <th>مسئول و شماره پیگیری</th>
+                  </tr>
+                </thead>
+                <tbody>${desktopRows}</tbody>
+              </table>
+            </div>
+            <div class="tuition-mobile-list">${mobileCards}</div>
+            ${notesHtml ? `<ul class="tuition-notes-list">${notesHtml}</ul>` : ""}
+          </div>
+        </div>
+      </div>
+    `;
+
+    const trigger = li.querySelector(".tuition-accordion-trigger");
+    const acc = li.querySelector(".tuition-accordion");
+    trigger.addEventListener("click", () => {
+      state.tuitionTableOpen = !state.tuitionTableOpen;
+      acc.classList.toggle("is-open", state.tuitionTableOpen);
+      trigger.setAttribute("aria-expanded", String(state.tuitionTableOpen));
+    });
+
+    return li;
   }
 
   function renderChecklist() {
@@ -266,6 +456,55 @@
       li.className = `checklist-item${checked ? " is-checked" : ""}`;
 
       const badgeText = item.guide || item.qty || "";
+
+      const highlightHtml = item.highlightBox
+        ? `<div class="highlight-callout" role="note">${ICONS.key}<span>${toFaDigits(item.highlightBox)}</span></div>`
+        : "";
+
+      const subNoteContent = item.subNoteHtml
+        ? `<div class="checklist-subnote">${toFaDigitsHtml(item.subNoteHtml)}</div>`
+        : item.subNote
+        ? `<p class="checklist-subnote">${toFaDigits(item.subNote)}</p>`
+        : "";
+
+      const fieldsGuideHtml = item.fieldsGuide
+        ? `
+          <div class="fields-guide-box" role="note">
+            <div class="fields-guide-title">${toFaDigits(item.fieldsGuide.title)}</div>
+            <dl class="fields-guide-list">
+              ${item.fieldsGuide.rows
+                .map(
+                  (row) => `
+                  <div class="fields-guide-row">
+                    <dt>${toFaDigits(row.label)}:</dt>
+                    <dd>
+                      <strong>${toFaDigits(row.value)}</strong>
+                      ${row.emphasis ? `<span class="fields-guide-emphasis">(${toFaDigits(row.emphasis)})</span>` : ""}
+                    </dd>
+                  </div>
+                `
+                )
+                .join("")}
+            </dl>
+          </div>
+        `
+        : "";
+
+      const linkItems = item.links
+        ? item.links
+        : item.linkUrl
+        ? [{ label: item.linkText || item.linkUrl, url: item.linkUrl, ltr: true }]
+        : [];
+
+      const linksHtml = linkItems.length
+        ? `<div class="checklist-links-row">${linkItems
+            .map(
+              (lnk) =>
+                `<a href="${lnk.url}" target="_blank" rel="noopener noreferrer" class="checklist-link${lnk.ltr ? " is-ltr" : ""}" onclick="event.stopPropagation()">${ICONS.external}<span>${toFaDigits(lnk.label)}</span></a>`
+            )
+            .join("")}</div>`
+        : "";
+
       li.innerHTML = `
         <label class="checklist-label">
           <input type="checkbox" class="checklist-checkbox" data-doc-id="${item.id}" ${checked ? "checked" : ""} />
@@ -274,12 +513,10 @@
               <span class="checklist-title">${toFaDigits(item.title)}</span>
               ${badgeText ? `<span class="checklist-qty">${toFaDigits(badgeText)}</span>` : ""}
             </div>
-            ${item.subNote ? `<p class="checklist-subnote">${toFaDigits(item.subNote)}</p>` : ""}
-            ${
-              item.linkUrl
-                ? `<a href="${item.linkUrl}" target="_blank" rel="noopener noreferrer" class="checklist-link" onclick="event.stopPropagation()">${ICONS.external}<span>${item.linkText || item.linkUrl}</span></a>`
-                : ""
-            }
+            ${highlightHtml}
+            ${subNoteContent}
+            ${fieldsGuideHtml}
+            ${linksHtml}
             ${
               item.warning
                 ? `<div class="alert-callout" role="note">${ICONS.alert}<span>${toFaDigits(item.warning)}</span></div>`
@@ -301,6 +538,11 @@
       });
 
       listEl.appendChild(li);
+
+      if (item.attachTuitionTable) {
+        const tuitionEl = buildTuitionCollapsibleElement();
+        if (tuitionEl) listEl.appendChild(tuitionEl);
+      }
     });
   }
 
@@ -327,7 +569,7 @@
   }
 
   // ==========================================================================
-  // ۴. بخش دوم: مسیر مرحله‌به‌مرحله + اتصال به نقشه
+  // ۴. بخش دوم: مسیر مرحله‌به‌مرحله + برنامه هر دانشکده + اتصال به نقشه
   // ==========================================================================
   let highlightTimer = null;
   function highlightMapPin(pinId, scrollTarget = "map") {
@@ -365,8 +607,19 @@
     if (!box || !DATA.faculties || !DATA.faculties.length) return;
     const active = getActiveFaculty();
 
+    const scheduleHtml = (active.schedule || [])
+      .map(
+        (row) => `
+        <li class="faculty-schedule-row">
+          <span class="faculty-schedule-program">${toFaDigits(row.program)}</span>
+          <span class="faculty-schedule-date">${ICONS.calendar}<span>${toFaDigits(row.date)}</span></span>
+        </li>
+      `
+      )
+      .join("");
+
     box.innerHTML = `
-      <div class="faculty-selector-label">رشته / دانشکده قبولی خود را انتخاب کنید تا محل دقیق ثبت‌نام حضوری نمایش داده شود:</div>
+      <div class="faculty-selector-label">رشته / دانشکده قبولی خود را انتخاب کنید تا روز، تاریخ و محل دقیق ثبت‌نام حضوری نمایش داده شود:</div>
       <div class="faculty-chips-row" role="group" aria-label="انتخاب دانشکده">
         ${DATA.faculties
           .map(
@@ -375,8 +628,32 @@
           )
           .join("")}
       </div>
-      <div class="faculty-venue-note">
-        <strong>محل ثبت‌نام حضوری (${active.label}):</strong> ${toFaDigits(active.venueNote)}
+
+      <div class="faculty-details-panel">
+        <div class="faculty-details-top">
+          <div class="faculty-venue-note${active.venueWarning ? " is-warning" : ""}">
+            ${active.venueWarning ? ICONS.alert : ICONS.mapPin}
+            <div>
+              <strong>${active.label}:</strong> ${toFaDigits(active.venueNote)}
+            </div>
+          </div>
+          ${
+            active.attendanceBadge
+              ? `<span class="attendance-required-badge">${ICONS.userCheck}<span>${toFaDigits(active.attendanceBadge)}</span></span>`
+              : ""
+          }
+        </div>
+
+        ${
+          scheduleHtml
+            ? `
+          <div class="faculty-schedule-block">
+            <div class="faculty-schedule-heading">برنامه دقیق روز و تاریخ مراجعه (${active.label}):</div>
+            <ul class="faculty-schedule-list">${scheduleHtml}</ul>
+          </div>
+        `
+            : ""
+        }
       </div>
     `;
 
@@ -680,9 +957,14 @@
     DATA.associations.forEach((assoc) => {
       const isPlaceholder = assoc.url.startsWith("#");
       const card = document.createElement("article");
-      card.className = `card assoc-card${isPlaceholder ? " is-placeholder" : ""}`;
+      card.className = `card assoc-card${assoc.featured ? " is-featured" : ""}${isPlaceholder ? " is-placeholder" : ""}`;
       card.innerHTML = `
         <div>
+          ${
+            assoc.featuredTag
+              ? `<div class="assoc-featured-ribbon">${ICONS.sparkle}<span>${toFaDigits(assoc.featuredTag)}</span></div>`
+              : ""
+          }
           <div class="assoc-top">
             <h4 class="assoc-name">${toFaDigits(assoc.name)}</h4>
             ${assoc.platform ? `<span class="assoc-cat-tag">${assoc.platform}</span>` : ""}
@@ -736,7 +1018,27 @@
           ? "status-confirmed"
           : item.state === "pending"
           ? "status-pending"
+          : item.state === "info"
+          ? "status-info"
           : "status-unknown";
+
+      const linksHtml = (item.links || [])
+        .map(
+          (lnk) =>
+            `<a href="${lnk.url}" target="_blank" rel="noopener noreferrer" class="status-link-btn">${ICONS.external}<span>${toFaDigits(lnk.label)}</span></a>`
+        )
+        .join("");
+
+      const phonesHtml = (item.phones || [])
+        .map(
+          (p) => `
+          <a href="${p.href}" class="status-phone-row">
+            <span class="status-phone-label">${ICONS.phone}<span>${toFaDigits(p.label)}</span></span>
+            <span class="status-phone-num" dir="ltr">${p.display}</span>
+          </a>
+        `
+        )
+        .join("");
 
       const card = document.createElement("article");
       card.className = "card status-card";
@@ -746,6 +1048,8 @@
           <span class="status-badge ${stateClass}">${toFaDigits(item.badgeText)}</span>
         </div>
         <p class="status-detail">${toFaDigits(item.detail)}</p>
+        ${linksHtml ? `<div class="status-links-wrap">${linksHtml}</div>` : ""}
+        ${phonesHtml ? `<div class="status-phones-list">${phonesHtml}</div>` : ""}
       `;
       gridEl.appendChild(card);
     });
@@ -754,11 +1058,11 @@
   function renderFaqs() {
     const listEl = document.getElementById("faq-list");
     const emptyEl = document.getElementById("faq-empty");
-    const q = state.faqQuery.trim().toLowerCase();
+    const q = normalizeFa(state.faqQuery);
 
     const filtered = DATA.faqs.filter((item) => {
       if (!q) return true;
-      return item.q.toLowerCase().includes(q) || item.a.toLowerCase().includes(q);
+      return normalizeFa(item.q).includes(q) || normalizeFa(item.a).includes(q);
     });
 
     listEl.innerHTML = "";
@@ -776,7 +1080,7 @@
         </button>
         <div class="faq-panel" id="${panelId}">
           <div class="faq-panel-inner">
-            <p class="faq-answer">${toFaDigits(item.a)}</p>
+            <div class="faq-answer">${toFaDigitsHtml(item.a)}</div>
           </div>
         </div>
       `;
@@ -815,6 +1119,7 @@
   // ==========================================================================
   function init() {
     renderHeaderAndFooter();
+    renderTimeline();
     renderOfficialNotice();
     initChecklistControls();
     renderChecklist();

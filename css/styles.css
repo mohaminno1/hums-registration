@@ -1699,6 +1699,809 @@ input:focus-visible {
 }
 
 /* ==========================================================================
+   ۷. استایل‌های افزوده‌شده: برندینگ، تایملاین، جدول شهریه، برنامه دانشکده و فوتر
+   ========================================================================== */
+
+/* --- هدر و بج کارگروه آموزشی شورای صنفی --- */
+.header-top {
+  align-items: flex-start;
+}
+
+.brand-meta {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 7px;
+  min-width: 0;
+}
+
+.brand-meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.creator-hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background-color: var(--status-confirmed-bg);
+  color: var(--status-confirmed-fg);
+  border: 1px solid #C5E2D2;
+  border-radius: var(--radius-pill);
+  font-size: 0.77rem;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.creator-hero-badge .icon {
+  color: var(--status-confirmed-fg);
+}
+
+/* --- بخش ۰: تقویم و تایملاین جامع ثبت‌نام --- */
+.timeline-section {
+  padding-block-start: 22px;
+}
+
+.timeline-card {
+  padding: 15px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.timeline-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+@media (min-width: 560px) {
+  .timeline-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.timeline-stage {
+  padding: 12px 13px;
+  background-color: var(--bg-soft);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.timeline-stage-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.timeline-step-num {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background-color: var(--accent);
+  color: #FFFFFF;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.78rem;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.timeline-date-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 9px;
+  background-color: var(--accent-tint);
+  color: var(--accent);
+  border: 1px solid #C8DDE3;
+  border-radius: var(--radius-pill);
+  font-size: 0.76rem;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.timeline-stage-title {
+  margin: 0;
+  font-size: 0.92rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  line-height: 1.5;
+}
+
+.timeline-stage-note {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  line-height: 1.65;
+}
+
+.timeline-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 10px 13px;
+  background-color: var(--accent-tint);
+  border-inline-start: 3px solid var(--accent);
+  border-radius: 6px;
+  font-size: 0.83rem;
+  color: var(--text-primary);
+  line-height: 1.75;
+}
+
+.timeline-notice .icon {
+  margin-block-start: 3px;
+  color: var(--accent);
+}
+
+.timeline-notice strong {
+  color: var(--accent);
+  margin-inline-end: 4px;
+}
+
+/* --- بهبودهای چک‌لیست: باکس کلیدی، راهنمای فیلدها، لینک‌ها --- */
+.checklist-subnote strong {
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.highlight-callout {
+  margin-block-start: 8px;
+  padding: 9px 12px;
+  background-color: var(--status-confirmed-bg);
+  color: var(--status-confirmed-fg);
+  border-inline-start: 4px solid var(--status-confirmed-fg);
+  border-radius: 5px;
+  font-size: 0.84rem;
+  font-weight: 700;
+  line-height: 1.7;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.highlight-callout .icon {
+  margin-block-start: 4px;
+  color: var(--status-confirmed-fg);
+}
+
+.fields-guide-box {
+  margin-block-start: 10px;
+  padding: 11px 13px;
+  background-color: var(--bg-soft);
+  border: 1px solid var(--border-card);
+  border-inline-start: 3px solid var(--accent);
+  border-radius: 6px;
+}
+
+.fields-guide-title {
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: var(--accent);
+  margin-block-end: 8px;
+}
+
+.fields-guide-list {
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.fields-guide-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 6px;
+  font-size: 0.82rem;
+  line-height: 1.65;
+}
+
+.fields-guide-row dt {
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.fields-guide-row dd {
+  margin: 0;
+  color: var(--text-primary);
+}
+
+.fields-guide-row dd strong {
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.fields-guide-emphasis {
+  color: var(--alert);
+  font-weight: 700;
+  font-size: 0.79rem;
+  margin-inline-start: 4px;
+}
+
+.checklist-links-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-block-start: 8px;
+}
+
+.checklist-links-row .checklist-link {
+  margin-block-start: 0;
+  direction: rtl;
+}
+
+.checklist-links-row .checklist-link.is-ltr {
+  direction: ltr;
+}
+
+/* --- جدول بازشونده شهریه علی‌الحساب، سفته و شماره پیگیری --- */
+.checklist-tuition-wrap {
+  padding: 12px 16px 16px;
+  background-color: #FCFBF8;
+  border-block-end: 1px solid var(--border-subtle);
+}
+
+.tuition-accordion {
+  border: 1px solid #C6DCE2;
+  border-radius: var(--radius-sm);
+  background-color: var(--bg-card);
+  overflow: hidden;
+}
+
+.tuition-accordion-trigger {
+  width: 100%;
+  min-height: 48px;
+  padding: 11px 14px;
+  background-color: var(--accent-tint);
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  text-align: start;
+  color: var(--accent);
+  font-size: 0.86rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.18s var(--ease);
+}
+
+.tuition-accordion-trigger:hover {
+  background-color: #DFEEF2;
+}
+
+.tuition-trigger-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  line-height: 1.55;
+}
+
+.tuition-accordion.is-open .faq-chevron {
+  transform: rotate(180deg);
+  color: var(--accent);
+}
+
+.tuition-accordion-panel {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.26s var(--ease);
+}
+
+.tuition-accordion.is-open .tuition-accordion-panel {
+  grid-template-rows: 1fr;
+}
+
+.tuition-accordion-inner {
+  overflow: hidden;
+}
+
+.tuition-table-scroll {
+  display: none;
+  padding: 12px 14px 4px;
+  overflow-x: auto;
+}
+
+.tuition-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+
+.tuition-table th {
+  text-align: start;
+  padding: 9px 10px;
+  background-color: var(--bg-soft);
+  color: var(--text-secondary);
+  font-weight: 700;
+  border-block-end: 1px solid var(--border-card);
+  white-space: nowrap;
+}
+
+.tuition-table td {
+  padding: 10px;
+  border-block-end: 1px solid var(--border-subtle);
+  vertical-align: top;
+  line-height: 1.65;
+}
+
+.tuition-table tbody tr:last-child td {
+  border-block-end: none;
+}
+
+.tuition-major-cell {
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.tuition-amount-tag,
+.promissory-amount-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.tuition-amount-tag {
+  background-color: var(--accent-tint);
+  color: var(--accent);
+}
+
+.promissory-amount-tag {
+  background-color: var(--status-pending-bg);
+  color: var(--status-pending-fg);
+}
+
+.tuition-contact-person {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-block-end: 4px;
+}
+
+.phone-links-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.phone-link-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  background-color: var(--bg-soft);
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-pill);
+  color: var(--accent);
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-decoration: none;
+  transition: background-color 0.16s var(--ease), border-color 0.16s var(--ease), color 0.16s var(--ease);
+}
+
+.phone-link-chip:hover {
+  background-color: var(--accent);
+  border-color: var(--accent);
+  color: #FFFFFF;
+}
+
+.phone-ext-note {
+  font-size: 0.76rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+/* کارت‌های خوانای موبایل برای جدول شهریه */
+.tuition-mobile-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+}
+
+.tuition-mobile-card {
+  padding: 11px 12px;
+  background-color: var(--bg-soft);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tuition-mobile-title {
+  font-size: 0.87rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  line-height: 1.5;
+}
+
+.tuition-mobile-amounts {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.tuition-mobile-metric {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+}
+
+.metric-label {
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.tuition-mobile-contact {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding-block-start: 6px;
+  border-block-start: 1px solid var(--border-card);
+}
+
+@media (min-width: 640px) {
+  .tuition-table-scroll {
+    display: block;
+  }
+
+  .tuition-mobile-list {
+    display: none;
+  }
+}
+
+.tuition-notes-list {
+  margin: 0;
+  padding: 10px 30px 13px 14px;
+  background-color: var(--bg-soft);
+  border-block-start: 1px solid var(--border-subtle);
+  font-size: 0.81rem;
+  color: var(--text-secondary);
+  line-height: 1.75;
+}
+
+.tuition-notes-list li + li {
+  margin-block-start: 4px;
+}
+
+/* --- ارتقای کادر مشخصات و برنامه زمانی هر دانشکده --- */
+.faculty-details-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.faculty-details-top {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.faculty-venue-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.faculty-venue-note .icon {
+  margin-block-start: 4px;
+  color: var(--accent);
+}
+
+.faculty-venue-note.is-warning {
+  background-color: var(--alert-bg);
+  border-inline-start-color: var(--alert);
+  color: var(--alert);
+  font-weight: 600;
+}
+
+.faculty-venue-note.is-warning strong,
+.faculty-venue-note.is-warning .icon {
+  color: var(--alert);
+}
+
+.attendance-required-badge {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 11px;
+  background-color: var(--status-pending-bg);
+  color: var(--status-pending-fg);
+  border: 1px solid #EED89D;
+  border-radius: var(--radius-pill);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.faculty-schedule-block {
+  padding: 11px 13px;
+  background-color: var(--bg-soft);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+}
+
+.faculty-schedule-heading {
+  font-size: 0.81rem;
+  font-weight: 800;
+  color: var(--text-secondary);
+  margin-block-end: 8px;
+}
+
+.faculty-schedule-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.faculty-schedule-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 10px;
+  padding: 7px 10px;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+}
+
+.faculty-schedule-program {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.55;
+}
+
+.faculty-schedule-date {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 9px;
+  background-color: var(--accent-tint);
+  color: var(--accent);
+  border-radius: var(--radius-pill);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+/* --- برجسته‌سازی کارت شورای صنفی در بخش کانال‌ها --- */
+.assoc-card.is-featured {
+  border-color: #B7DEC9;
+  background: linear-gradient(180deg, #F5FBF7 0%, #FFFFFF 38%);
+}
+
+@media (min-width: 560px) {
+  .assoc-card.is-featured {
+    grid-column: 1 / -1;
+  }
+}
+
+.assoc-featured-ribbon {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-block-end: 8px;
+  padding: 3px 10px;
+  background-color: var(--status-confirmed-bg);
+  color: var(--status-confirmed-fg);
+  border: 1px solid #C3E3D1;
+  border-radius: var(--radius-pill);
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+/* --- بهبودهای تابلوی وضعیت و تماس‌های رفاهی --- */
+.status-badge.status-info {
+  background-color: var(--accent-tint);
+  color: var(--accent);
+}
+
+.status-links-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-block-start: 2px;
+}
+
+.status-link-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 38px;
+  padding: 5px 11px;
+  background-color: var(--accent-tint);
+  border: 1px solid #C6DCE2;
+  border-radius: var(--radius-sm);
+  color: var(--accent);
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-decoration: none;
+  transition: background-color 0.16s var(--ease), color 0.16s var(--ease);
+}
+
+.status-link-btn:hover {
+  background-color: var(--accent);
+  border-color: var(--accent);
+  color: #FFFFFF;
+}
+
+.status-phones-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-block-start: 4px;
+}
+
+.status-phone-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 40px;
+  padding: 6px 10px;
+  background-color: var(--bg-soft);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  text-decoration: none;
+  transition: border-color 0.16s var(--ease), background-color 0.16s var(--ease);
+}
+
+.status-phone-row:hover {
+  border-color: var(--accent);
+  background-color: var(--accent-tint);
+}
+
+.status-phone-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.status-phone-label .icon {
+  color: var(--accent);
+}
+
+.status-phone-num {
+  font-size: 0.81rem;
+  font-weight: 700;
+  color: var(--accent);
+  white-space: nowrap;
+}
+
+/* --- لینک‌های داخلی در پاسخ‌های FAQ --- */
+.faq-answer strong {
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.inline-link {
+  color: var(--accent);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.inline-link:hover {
+  color: var(--accent-hover);
+}
+
+/* --- فوتر اختصاصی، تمیز و حرفه‌ای --- */
+.site-footer {
+  margin-block-start: 42px;
+  padding-block-start: 22px;
+  border-block-start: 1px solid var(--border-card);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.footer-brand-card {
+  padding: 18px;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-card);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+@media (min-width: 600px) {
+  .footer-brand-card {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+}
+
+.footer-brand-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.footer-author {
+  margin: 0;
+  font-size: 0.96rem;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.footer-org {
+  margin: 0;
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.footer-tagline {
+  margin: 2px 0 0;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  line-height: 1.7;
+}
+
+.footer-brand-cta {
+  flex-shrink: 0;
+}
+
+.footer-channel-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: var(--tap-min);
+  padding-inline: 16px;
+  background-color: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  color: #FFFFFF;
+  font-size: 0.84rem;
+  font-weight: 700;
+  text-decoration: none;
+  transition: background-color 0.18s var(--ease);
+}
+
+.footer-channel-btn:hover {
+  background-color: var(--accent-hover);
+}
+
+.footer-bottom {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+/* ==========================================================================
    استایل چاپ (@media print)
    ========================================================================== */
 @media print {
