@@ -1,10 +1,10 @@
 /* ==========================================================================
-   تایپوگرافی: فونت Self-Hosted (Vazirmatn RD) + Google Fonts Vazirmatn
+   تایپوگرافی: فونت ۱۰۰٪ لوکال (پوشه fonts/) بدون وابستگی به Google Fonts
    ========================================================================== */
 @font-face {
-  font-family: "Vazirmatn RD";
-  src: url("../fonts/Vazirmatn-RD[wght].woff2") format("woff2-variations"),
-       url("../fonts/Vazirmatn-RD[wght].woff2") format("woff2");
+  font-family: 'Vazirmatn';
+  src: url('../fonts/Vazirmatn-RD[wght].woff2') format('woff2-variations'),
+       url('../fonts/Vazirmatn-RD-Regular.woff2') format('woff2');
   font-weight: 100 900;
   font-style: normal;
   font-display: swap;
@@ -41,7 +41,7 @@
   --radius-sm: 7px;
   --radius-pill: 999px;
 
-  --font-sans: "Vazirmatn RD", "Vazirmatn", system-ui, -apple-system, "Segoe UI", Tahoma, sans-serif;
+  --font-sans: 'Vazirmatn', system-ui, -apple-system, 'Segoe UI', Tahoma, sans-serif;
   --max-width: 780px;
   --tap-min: 44px;
   --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
@@ -3577,8 +3577,27 @@ textarea {
   will-change: transform;
 }
 
+/* باکس راهنمای غیرفعال بودن جاوااسکریپت */
+.noscript-banner {
+  margin-block: 16px;
+  padding: 14px 16px;
+  background-color: var(--status-pending-bg);
+  border: 1px solid #EED89D;
+  border-inline-start: 4px solid var(--status-pending-fg);
+  border-radius: var(--radius-card);
+  color: var(--text-primary);
+  font-size: 0.88rem;
+  line-height: 1.8;
+}
+
+.noscript-banner a {
+  color: var(--accent);
+  font-weight: 700;
+  text-decoration: underline;
+}
+
 /* ==========================================================================
-   استایل چاپ (@media print)
+   استایل چاپ (@media print) — پرینت اختصاصی و تمیز چک‌لیست و مراحل
    ========================================================================== */
 @media print {
   @page {
@@ -3598,7 +3617,9 @@ textarea {
   .btn-share,
   .sticky-jump-nav,
   .mobile-bottom-nav,
+  .profile-builder,
   .checklist-controls,
+  .checklist-detail-toggle,
   .reset-confirm-bar,
   .map-float-controls,
   .map-floating-card,

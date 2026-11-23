@@ -19,6 +19,13 @@
     faculty: `reg_guide_${DATA.storageVersion}_faculty`
   };
 
+  // هماهنگ‌سازی همزمان صفت HTML hidden و کلاس hidden
+  function setHidden(el, isHidden) {
+    if (!el) return;
+    el.hidden = Boolean(isHidden);
+    el.classList.toggle("hidden", Boolean(isHidden));
+  }
+
   // تبدیل تمام ارقام لاتین به ارقام فارسی (برای متن ساده)
   function toFaDigits(input) {
     const fa = ["۰", "۱", "۲", "۳", "۴", "۵", "۶", "۷", "۸", "۹"];
@@ -267,9 +274,9 @@
     const { remainingCount } = getChecklistStats();
     if (remainingCount > 0) {
       badge.textContent = toFaDigits(remainingCount);
-      badge.classList.remove("hidden");
+      setHidden(badge, false);
     } else {
-      badge.classList.add("hidden");
+      setHidden(badge, true);
     }
   }
 
@@ -756,10 +763,10 @@
     if (!btn || !label) return;
     const expandableIds = displayedItems.filter(itemHasDetails).map((i) => i.id);
     if (expandableIds.length === 0) {
-      btn.classList.add("hidden");
+      setHidden(btn, true);
       return;
     }
-    btn.classList.remove("hidden");
+    setHidden(btn, false);
     const allOpen = expandableIds.every((id) => state.expandedDocs.has(id));
     label.textContent = allOpen ? "بستن همه جزئیات" : "باز کردن همه جزئیات";
     btn.classList.toggle("is-all-open", allOpen);
@@ -842,8 +849,11 @@
     document.getElementById("checklist-progressbar").setAttribute("aria-valuenow", String(progressPercent));
 
     const isComplete = applicableTotalCount > 0 && progressPercent === 100;
-    if (progressBlock) progressBlock.classList.toggle("is-complete", isComplete);
-    if (celebrationEl) celebrationEl.classList.toggle("hidden", !isComplete);
+    if (progressBlock) {
+      setHidden(progressBlock, false);
+      progressBlock.classList.toggle("is-complete", isComplete);
+    }
+    setHidden(celebrationEl, !isComplete);
 
     updateToggleAllButton(displayedItems);
 
@@ -856,9 +866,9 @@
       } else {
         emptyEl.textContent = "موردی برای نمایش وجود ندارد.";
       }
-      emptyEl.classList.remove("hidden");
+      setHidden(emptyEl, false);
     } else {
-      emptyEl.classList.add("hidden");
+      setHidden(emptyEl, true);
     }
 
     let lastGroup = null;
@@ -1052,11 +1062,11 @@
         showToast("چک‌لیست همین الان در حالت پیش‌فرض است.");
         return;
       }
-      confirmBar.classList.remove("hidden");
+      setHidden(confirmBar, false);
     });
 
     confirmNo.addEventListener("click", () => {
-      confirmBar.classList.add("hidden");
+      setHidden(confirmBar, true);
     });
 
     confirmYes.addEventListener("click", () => {
@@ -1067,7 +1077,7 @@
       filterButtons.forEach((b) => b.classList.toggle("is-active", b.dataset.checklistFilter === "all"));
       saveStoredSet(STORAGE_KEYS.checklist, state.checkedDocs);
       saveStoredSet(STORAGE_KEYS.conditions, state.selectedConditions);
-      confirmBar.classList.add("hidden");
+      setHidden(confirmBar, true);
       syncAllViews();
       showToast("همه تیک‌ها و شرایط انتخاب‌شده پاک شد.");
     });
@@ -1270,7 +1280,7 @@
 
     if (!pin) {
       state.activePinId = null;
-      cards.forEach((c) => c.classList.add("hidden"));
+      cards.forEach((c) => setHidden(c, true));
       document.querySelectorAll(".map-pin-marker.is-highlighted, .legend-item.is-highlighted").forEach((el) => {
         el.classList.remove("is-highlighted");
       });
@@ -1321,7 +1331,7 @@
 
     cards.forEach((c) => {
       c.innerHTML = cardMarkup;
-      c.classList.remove("hidden");
+      setHidden(c, false);
 
       const closeBtn = c.querySelector(".floating-card-close");
       if (closeBtn) {
@@ -1402,7 +1412,7 @@
 
     const extNote = document.getElementById("campus-external-note");
     if (DATA.map.externalNoteText) {
-      extNote.classList.remove("hidden");
+      setHidden(extNote, false);
       extNote.innerHTML = `
         ${ICONS.info}
         <div>
@@ -1625,8 +1635,8 @@
     const inlineCtrl = createMapController(inlineViewport, inlineStage, {
       isFullscreen: false,
       onZoomChange: (s) => {
-        if (inlineResetBtn) inlineResetBtn.classList.toggle("hidden", s <= 1);
-        if (tapHint) tapHint.classList.toggle("hidden", s > 1);
+        setHidden(inlineResetBtn, s <= 1);
+        setHidden(tapHint, s > 1);
       }
     });
 
@@ -1834,7 +1844,7 @@
     });
 
     listEl.innerHTML = "";
-    emptyEl.classList.toggle("hidden", filtered.length > 0);
+    setHidden(emptyEl, filtered.length > 0);
 
     filtered.forEach((item, index) => {
       const wrapper = document.createElement("article");
@@ -1869,14 +1879,14 @@
 
     input.addEventListener("input", () => {
       state.faqQuery = input.value;
-      clearBtn.classList.toggle("hidden", !input.value);
+      setHidden(clearBtn, !input.value);
       renderFaqs();
     });
 
     clearBtn.addEventListener("click", () => {
       input.value = "";
       state.faqQuery = "";
-      clearBtn.classList.add("hidden");
+      setHidden(clearBtn, true);
       renderFaqs();
       input.focus();
     });
