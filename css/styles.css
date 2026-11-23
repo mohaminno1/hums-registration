@@ -4526,14 +4526,10 @@ textarea {
 }
 
 .map-modal-shell {
-  position: relative;
-  width: 100%;
-  min-height: 240px;
-  margin-block-end: 16px;
-  border: 1px solid var(--border-card);
-  border-radius: var(--radius-card);
-  overflow: hidden;
-  flex-shrink: 0;
+  height: auto;
+  max-height: none;
+  max-width: 760px; /* اختیاری: تو دسکتاپ خیلی غول نشه ولی کامل دیده شه */
+  margin-inline: auto;
 }
 
 .map-modal-shell .map-canvas img {
