@@ -28,7 +28,7 @@
 
   <link rel="icon" type="image/png" href="assets/favicon.png" />
   <link rel="apple-touch-icon" href="assets/favicon.png" />
-  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="stylesheet" href="css/styles.css?v=20261123" />
 </head>
 <body>
   <div class="app-screen-shell">
@@ -48,7 +48,6 @@
             <span class="utility-brand-dot" aria-hidden="true"></span>
             <span class="utility-brand-name">راهنمای ثبت‌نام</span>
           </a>
-          <button type="button" class="utility-major-chip hidden" id="utility-major-chip" title="ویرایش رشته در قدم ۱" hidden></button>
         </div>
 
         <div class="utility-actions" role="toolbar" aria-label="ابزارهای سریع">
@@ -76,6 +75,13 @@
             </svg>
             <span>ضروری‌ها</span>
           </button>
+        </div>
+      </div>
+      <!-- زیرنوار باریک نمایش رشته انتخابی (فقط پس از انتخاب رشته و خارج از صفحه شروع) -->
+      <div class="utility-subbar hidden" id="utility-subbar" hidden>
+        <div class="utility-subbar-inner">
+          <span class="utility-subbar-major" id="utility-subbar-major"></span>
+          <button type="button" class="utility-change-btn" id="utility-change-major-btn">تغییر رشته</button>
         </div>
       </div>
     </header>
@@ -320,7 +326,7 @@
        ====================================================================== -->
   <section class="print-only-sheet" id="print-sheet" aria-hidden="true"></section>
 
-  <script src="js/data.js"></script>
-  <script src="js/app.js"></script>
+  <script src="js/data.js?v=20261123"></script>
+  <script src="js/app.js?v=20261123"></script>
 </body>
 </html>

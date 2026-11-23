@@ -409,14 +409,15 @@
   // نوار بالای مینیمال (Sticky Quick-Utility Bar) و صفحه شروع (#welcome)
   // ==========================================================================
   function renderUtilityBar() {
-    const chip = document.getElementById("utility-major-chip");
+    const subbar = document.getElementById("utility-subbar");
+    const majorText = document.getElementById("utility-subbar-major");
     const major = getActiveMajor();
-    if (major) {
-      const shortName = major.label.split("—")[0].split("(")[0].trim();
-      chip.textContent = toFaDigits(shortName);
-      setHidden(chip, false);
+    const shouldShow = Boolean(major && state.currentRoute !== "welcome");
+    if (shouldShow && majorText) {
+      majorText.textContent = `رشته انتخابی: ${toFaDigits(major.label)}`;
+      setHidden(subbar, false);
     } else {
-      setHidden(chip, true);
+      setHidden(subbar, true);
     }
   }
 
@@ -1352,10 +1353,6 @@
             ${ICONS.print}
             <span>چاپ / PDF چک‌لیست من</span>
           </button>
-          <a href="${DATA.meta.footerChannelUrl}" target="_blank" rel="noopener noreferrer" class="mypath-btn-secondary">
-            ${ICONS.send}
-            <span>گزارش تغییر یا خطا به شورای صنفی</span>
-          </a>
         </div>
       </div>
     `;
@@ -1384,12 +1381,18 @@
     setHidden(el, false);
     document.body.style.overflow = "hidden";
 
-    if (name === "map" && modalMapCtrl) {
-      modalMapCtrl.reset();
+    if (name === "map") {
+      const modalImg = document.getElementById("modal-map-img");
+      if (modalImg && (!modalImg.getAttribute("src") || modalImg.naturalWidth === 0)) {
+        modalImg.src = DATA.map.imageUrl;
+      }
+      if (modalMapCtrl) modalMapCtrl.reset();
       updateMapDestinationHighlight();
       const major = getActiveMajor();
-      if (major && !state.activePinId) {
+      if (major) {
         renderFloatingPinCard(major.mapPinId);
+      } else if (state.activePinId) {
+        renderFloatingPinCard(state.activePinId);
       }
     }
 
@@ -1477,15 +1480,11 @@
         </div>
 
         <div class="essentials-section">
-          <h4 class="essentials-heading">پشتیبانی شورای صنفی</h4>
+          <h4 class="essentials-heading">کانال رسمی شورای صنفی</h4>
           <div class="essentials-btn-stack">
             <a href="${DATA.meta.footerChannelUrl}" target="_blank" rel="noopener noreferrer" class="footer-channel-btn">
               ${ICONS.send}
               <span>کانال تلگرام شورای صنفی دانشجویان</span>
-            </a>
-            <a href="${DATA.meta.footerChannelUrl}" target="_blank" rel="noopener noreferrer" class="mypath-btn-secondary">
-              ${ICONS.info}
-              <span>گزارش تغییر یا سوال</span>
             </a>
           </div>
         </div>
@@ -1880,8 +1879,8 @@
   // راه‌اندازی اولیه
   // ==========================================================================
   function initEventListeners() {
-    // کلیک روی چیپ رشته در نوار بالا -> رفتن به قدم ۱ برای ویرایش
-    document.getElementById("utility-major-chip").addEventListener("click", () => navigateTo(1));
+    // کلیک روی دکمه تغییر رشته در زیرنوار -> رفتن به قدم ۱ برای ویرایش
+    document.getElementById("utility-change-major-btn").addEventListener("click", () => navigateTo(1));
 
     // دکمه‌های کشوهای نوار بالا
     document.getElementById("open-map-drawer-btn").addEventListener("click", () => openDrawer("map"));
