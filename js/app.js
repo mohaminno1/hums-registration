@@ -1,7 +1,7 @@
 /**
  * ============================================================================
- * منطق رندرینگ و تعاملات راهنمای روز ثبت‌نام (app.js)
- * Zero-Dependency Vanilla JavaScript — Single Source of Truth State
+ * منطق راهنمای مینیمال و قدم‌به‌قدم روز ثبت‌نام (app.js)
+ * Single-Page Guided Wizard + Hash Routing + Single Source of Truth State
  * ============================================================================
  */
 
@@ -16,7 +16,8 @@
     conditions: `reg_guide_${DATA.storageVersion}_conditions`,
     major: `reg_guide_${DATA.storageVersion}_major`,
     steps: `reg_guide_${DATA.storageVersion}_steps`,
-    faculty: `reg_guide_${DATA.storageVersion}_faculty`
+    faculty: `reg_guide_${DATA.storageVersion}_faculty`,
+    lastStep: `reg_guide_${DATA.storageVersion}_last_step`
   };
 
   // هماهنگ‌سازی همزمان صفت HTML hidden و کلاس hidden
@@ -69,7 +70,7 @@
     try {
       localStorage.setItem(key, JSON.stringify(Array.from(setObj)));
     } catch {
-      // ignore storage errors in private mode
+      // ignore storage errors
     }
   }
 
@@ -107,20 +108,35 @@
     return DATA.faculties && DATA.faculties.length ? DATA.faculties[0].id : null;
   }
 
+  function loadStoredLastStep() {
+    try {
+      const n = Number(localStorage.getItem(STORAGE_KEYS.lastStep));
+      if (n >= 1 && n <= 5) return n;
+    } catch {
+      // ignore
+    }
+    return 1;
+  }
+
   const initialMajorId = loadStoredMajor();
 
   // وضعیت مشترک سطح بالا (Single Source of Truth)
   const state = {
+    currentRoute: "welcome", // "welcome" | 1 | 2 | 3 | 4 | 5
+    lastStep: loadStoredLastStep(),
     checkedDocs: loadStoredSet(STORAGE_KEYS.checklist),
     selectedConditions: loadStoredConditions(),
     selectedMajorId: initialMajorId,
     selectedFacultyId: loadStoredFaculty(initialMajorId),
     doneSteps: loadStoredSet(STORAGE_KEYS.steps),
     statusFilter: "all",
-    expandedDocs: new Set(), // پیش‌فرض همه جمع (Collapsed)
+    expandedDocs: new Set(),
+    step3ConditionsOpen: false,
     tuitionTableOpen: false,
     faqQuery: "",
-    activePinId: null
+    activePinId: null,
+    activeDrawer: null,
+    savedScrollY: 0
   };
 
   // آیکون‌های خطی Inline SVG
@@ -142,8 +158,12 @@
     key: `<svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"></path></svg>`,
     table: `<svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="3" y1="15" x2="21" y2="15"></line><line x1="9" y1="3" x2="9" y2="21"></line></svg>`,
     sparkle: `<svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8L12 2z"></path></svg>`,
-    compass: `<svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon></svg>`,
-    listCheck: `<svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>`
+    print: `<svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>`,
+    share: `<svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>`,
+    reset: `<svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>`,
+    fullscreen: `<svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>`,
+    send: `<svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>`,
+    sliders: `<svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line><line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line><line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line><line x1="1" y1="14" x2="7" y2="14"></line><line x1="9" y1="8" x2="15" y2="8"></line><line x1="17" y1="16" x2="23" y2="16"></line></svg>`
   };
 
   // نمایش Toast
@@ -159,7 +179,6 @@
     }, 2500);
   }
 
-  // کپی متن در کلیپ‌بورد با fallback
   async function copyToClipboard(text, successMsg) {
     try {
       if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -180,12 +199,39 @@
     }
   }
 
+  async function triggerShare() {
+    const shareData = {
+      title: DATA.meta.shareTitle || DATA.meta.title,
+      text: DATA.meta.shareText || DATA.meta.title,
+      url: window.location.href
+    };
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData);
+        return;
+      } catch (err) {
+        if (err && err.name === "AbortError") return;
+      }
+    }
+    copyToClipboard(`${shareData.text}\n${shareData.url}`, "متن معرفی و لینک راهنما کپی شد.");
+  }
+
+  function triggerPrintChecklist() {
+    renderPrintSheet();
+    window.print();
+  }
+
   // ==========================================================================
-  // توابع مرکزی Single Source of Truth (محاسبه چک‌لیست + همگام‌سازی سراسری)
+  // توابع مرکزی Single Source of Truth
   // ==========================================================================
   function getActiveMajor() {
     if (!state.selectedMajorId || !DATA.majors) return null;
     return DATA.majors.find((m) => m.id === state.selectedMajorId) || null;
+  }
+
+  function getActiveFaculty() {
+    if (!DATA.faculties || !DATA.faculties.length) return null;
+    return DATA.faculties.find((f) => f.id === state.selectedFacultyId) || DATA.faculties[0];
   }
 
   function getChecklistStats() {
@@ -198,13 +244,12 @@
       return item.condition === "mandatory" || selectedConditions.includes(item.condition);
     });
 
-    // ۲. تعداد تیک‌خورده‌ها حتماً باید اشتراک (Intersection) با applicableItems باشد:
+    // ۲. تعداد تیک‌خورده‌ها حتماً اشتراک (Intersection) با applicableItems است:
     const applicableCompletedCount = applicableItems.filter((item) =>
       state.checkedDocs.has(item.id)
     ).length;
 
     const applicableTotalCount = applicableItems.length;
-    const remainingCount = Math.max(0, applicableTotalCount - applicableCompletedCount);
     const progressPercent =
       applicableTotalCount === 0
         ? 0
@@ -221,10 +266,18 @@
       applicableItems,
       applicableCompletedCount,
       applicableTotalCount,
-      remainingCount,
       progressPercent,
       displayedItems
     };
+  }
+
+  function getConditionAddedCount(condId) {
+    const selected = Array.from(state.selectedConditions);
+    return DATA.checklist.filter((item) => {
+      if (item.condition !== condId) return false;
+      const isExcluded = (item.excludeWhen || []).some((c) => selected.includes(c));
+      return !isExcluded;
+    }).length;
   }
 
   function toggleCondition(condId) {
@@ -259,97 +312,142 @@
       }
     }
 
-    renderMyPathCard();
-    renderFacultySelector();
-    renderStepper();
-    updateMapDestinationHighlight();
-    if (state.activePinId) {
-      renderFloatingPinCard(state.activePinId);
-    }
-  }
-
-  function updateBottomNavBadge() {
-    const badge = document.getElementById("bottom-nav-checklist-badge");
-    if (!badge) return;
-    const { remainingCount } = getChecklistStats();
-    if (remainingCount > 0) {
-      badge.textContent = toFaDigits(remainingCount);
-      setHidden(badge, false);
-    } else {
-      setHidden(badge, true);
-    }
+    syncAllViews();
   }
 
   function syncAllViews() {
-    renderMyPathCard();
-    renderProfileBuilder();
-    renderChecklist();
-    updateBottomNavBadge();
+    renderUtilityBar();
+    renderWelcomeView();
+    renderPrintSheet();
+    if (state.currentRoute === 1) renderStep1();
+    else if (state.currentRoute === 2) renderStep2();
+    else if (state.currentRoute === 3) renderStep3();
+    else if (state.currentRoute === 4) renderStep4();
+    else if (state.currentRoute === 5) renderStep5();
+    updateMapDestinationHighlight();
+    if (state.activePinId) renderFloatingPinCard(state.activePinId);
   }
 
   // ==========================================================================
-  // ۱. رندر هدر، فوتر و اشتراک‌گذاری
+  // مسیریابی با URL Hash (#welcome, #step-1 .. #step-5)
   // ==========================================================================
-  function renderHeaderAndFooter() {
-    document.getElementById("faculty-badge").textContent = DATA.meta.facultyBadge;
-    document.getElementById("academic-term").textContent = toFaDigits(DATA.meta.academicTerm);
+  function parseHashRoute() {
+    const hash = (window.location.hash || "").replace(/^#/, "").trim();
+    const match = /^step-([1-5])$/.exec(hash);
+    if (match) return Number(match[1]);
+    return "welcome";
+  }
 
-    const creatorBadgeText = document.getElementById("creator-hero-badge-text");
-    if (creatorBadgeText && DATA.meta.creatorBadge) {
-      creatorBadgeText.textContent = DATA.meta.creatorBadge;
+  function navigateTo(route) {
+    const nextHash = route === "welcome" ? "#welcome" : `#step-${route}`;
+    if (window.location.hash !== nextHash) {
+      window.location.hash = nextHash;
+    } else {
+      applyRoute(route, true);
     }
+  }
 
-    document.getElementById("site-title").textContent = DATA.meta.title;
-    document.getElementById("site-subtitle").textContent = toFaDigits(DATA.meta.subtitle);
+  function applyRoute(route, shouldScrollTop) {
+    state.currentRoute = route;
+    const welcomeEl = document.getElementById("view-welcome");
+    const wizardEl = document.getElementById("view-wizard");
 
-    const authorEl = document.getElementById("footer-author");
-    const orgEl = document.getElementById("footer-org");
-    const taglineEl = document.getElementById("footer-tagline");
-    const channelBtn = document.getElementById("footer-channel-btn");
-
-    if (authorEl) authorEl.textContent = DATA.meta.footerAuthor;
-    if (orgEl) orgEl.textContent = DATA.meta.footerOrg;
-    if (taglineEl) taglineEl.textContent = toFaDigits(DATA.meta.footerTagline);
-    if (channelBtn && DATA.meta.footerChannelUrl) {
-      channelBtn.href = DATA.meta.footerChannelUrl;
-    }
-
-    document.getElementById("footer-note").textContent = toFaDigits(DATA.meta.footerNote);
-
-    const shareBtn = document.getElementById("share-btn");
-    shareBtn.addEventListener("click", async () => {
-      const shareData = {
-        title: DATA.meta.shareTitle || DATA.meta.title,
-        text: DATA.meta.shareText || `${DATA.meta.title} — ${DATA.meta.facultyBadge}`,
-        url: window.location.href
-      };
-      if (navigator.share) {
-        try {
-          await navigator.share(shareData);
-          return;
-        } catch (err) {
-          if (err && err.name === "AbortError") return;
-        }
+    if (route === "welcome") {
+      setHidden(welcomeEl, false);
+      setHidden(wizardEl, true);
+      renderWelcomeView();
+    } else {
+      state.lastStep = route;
+      try {
+        localStorage.setItem(STORAGE_KEYS.lastStep, String(route));
+      } catch {
+        // ignore
       }
-      const clipboardPayload = `${shareData.text}\n${shareData.url}`;
-      copyToClipboard(clipboardPayload, "متن معرفی و لینک راهنما کپی شد.");
-    });
 
-    const printBtn = document.getElementById("print-btn");
-    printBtn.addEventListener("click", () => window.print());
+      setHidden(welcomeEl, true);
+      setHidden(wizardEl, false);
+
+      // به‌روزرسانی نوار ۵ قدم بالا
+      document.querySelectorAll(".wstep-btn").forEach((btn) => {
+        const s = Number(btn.dataset.step);
+        btn.classList.toggle("is-active", s === route);
+        btn.classList.toggle("is-done", s < route);
+        if (s === route) btn.setAttribute("aria-current", "step");
+        else btn.removeAttribute("aria-current");
+      });
+
+      // نمایش فقط پنل قدم فعال
+      for (let i = 1; i <= 5; i++) {
+        const panel = document.getElementById(`panel-step-${i}`);
+        setHidden(panel, i !== route);
+      }
+
+      // رندر محتوای قدم فعال
+      if (route === 1) renderStep1();
+      else if (route === 2) renderStep2();
+      else if (route === 3) renderStep3();
+      else if (route === 4) renderStep4();
+      else if (route === 5) renderStep5();
+
+      // به‌روزرسانی نوار ناوبری پایین قدم
+      const counterEl = document.getElementById("wizard-step-counter");
+      const prevBtn = document.getElementById("wizard-prev-btn");
+      const nextBtn = document.getElementById("wizard-next-btn");
+
+      counterEl.textContent = `قدم ${toFaDigits(route)} از ۵`;
+      prevBtn.textContent = route === 1 ? "صفحه شروع" : "مرحله قبل";
+      nextBtn.textContent = route === 5 ? "بازگشت به خلاصه / شروع" : "مرحله بعد ←";
+    }
+
+    renderUtilityBar();
+    if (shouldScrollTop) {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
   }
 
   // ==========================================================================
-  // ۱-الف. کارت «مسیر اختصاصی من» در بالای صفحه (Single Source of Truth)
+  // نوار بالای مینیمال (Sticky Quick-Utility Bar) و صفحه شروع (#welcome)
   // ==========================================================================
-  function renderMyPathCard() {
-    const card = document.getElementById("my-path-card");
-    if (!card || !DATA.majors) return;
+  function renderUtilityBar() {
+    const chip = document.getElementById("utility-major-chip");
+    const major = getActiveMajor();
+    if (major) {
+      const shortName = major.label.split("—")[0].split("(")[0].trim();
+      chip.textContent = toFaDigits(shortName);
+      setHidden(chip, false);
+    } else {
+      setHidden(chip, true);
+    }
+  }
 
-    const activeMajor = getActiveMajor();
-    const { applicableCompletedCount, applicableTotalCount, progressPercent } = getChecklistStats();
+  function renderWelcomeView() {
+    const cta = document.getElementById("welcome-primary-cta");
+    const changeLink = document.getElementById("welcome-change-major-link");
+    const major = getActiveMajor();
 
-    // گروه‌بندی ۲۰ رشته برای <optgroup>
+    if (major) {
+      const targetStep = state.lastStep >= 1 && state.lastStep <= 5 ? state.lastStep : 2;
+      const shortName = major.label.split("—")[0].split("(")[0].trim();
+      cta.href = `#step-${targetStep}`;
+      cta.innerHTML = `<span>ادامه مسیر (${toFaDigits(shortName)})</span><span aria-hidden="true">←</span>`;
+      setHidden(changeLink, false);
+    } else {
+      cta.href = "#step-1";
+      cta.innerHTML = `<span>شروع راهنمای قدم‌به‌قدم ثبت‌نام</span><span aria-hidden="true">←</span>`;
+      setHidden(changeLink, true);
+    }
+  }
+
+  // ==========================================================================
+  // قدم ۱: «چه رشته‌ای قبول شدی؟»
+  // ==========================================================================
+  function renderStep1() {
+    const panel = document.getElementById("panel-step-1");
+    if (!panel) return;
+
+    const { applicableTotalCount } = getChecklistStats();
+
+    // گروه‌بندی ۲۰ رشته
     const groupsOrder = [];
     const grouped = new Map();
     DATA.majors.forEach((m) => {
@@ -373,252 +471,207 @@
       })
       .join("");
 
-    const quickChipsHtml = (DATA.checklistConditions || [])
+    const chipsHtml = DATA.checklistConditions
       .map((cond) => {
         const isActive = state.selectedConditions.has(cond.id);
+        const count = getConditionAddedCount(cond.id);
         return `
           <button
             type="button"
-            class="mypath-cond-chip${isActive ? " is-active" : ""}"
-            data-mypath-cond="${cond.id}"
+            class="profile-chip${isActive ? " is-active" : ""}"
+            data-step1-cond="${cond.id}"
             aria-pressed="${isActive}"
           >
-            ${isActive ? ICONS.check : ICONS.plus}
-            <span>${toFaDigits(cond.label.split("(")[0].trim())}</span>
+            <span class="profile-chip-top">
+              <span class="profile-chip-status-icon">${isActive ? ICONS.check : ICONS.plus}</span>
+              <span class="profile-chip-label">${toFaDigits(cond.label)}</span>
+              <span class="profile-chip-count">+${toFaDigits(count)} مدرک</span>
+            </span>
+            ${cond.hint ? `<span class="profile-chip-hint">${toFaDigits(cond.hint)}</span>` : ""}
           </button>
         `;
       })
       .join("");
 
-    const resultHtml = activeMajor
-      ? `
-        <div class="mypath-result">
-          ${
-            activeMajor.warningBanner
-              ? `<div class="mypath-warning-banner" role="alert">${ICONS.alert}<span>${toFaDigits(activeMajor.warningBanner)}</span></div>`
-              : ""
-          }
-          <div class="mypath-result-grid">
-            <div class="mypath-result-item">
-              <span class="mypath-result-kicker">${ICONS.calendar}<span>روز مراجعه حضوری شما</span></span>
-              <strong class="mypath-result-value">${toFaDigits(activeMajor.date)}</strong>
-              <span class="mypath-result-sub">ثبت‌نام آنلاین هم‌آوا: ۲ تا ۵ آذر ۱۴۰۵ (حضور شخص پذیرفته‌شده الزامی است)</span>
-            </div>
-            <div class="mypath-result-item">
-              <span class="mypath-result-kicker">${ICONS.mapPin}<span>ساختمان و نشانی دقیق</span></span>
-              <strong class="mypath-result-value">${toFaDigits(activeMajor.building)}</strong>
-              <span class="mypath-result-sub">${toFaDigits(activeMajor.address)}</span>
-            </div>
-          </div>
-
-          <div class="mypath-footer-row">
-            <div class="mypath-progress-pill${progressPercent === 100 && applicableTotalCount > 0 ? " is-complete" : ""}">
-              ${ICONS.listCheck}
-              <span>${toFaDigits(applicableCompletedCount)} از ${toFaDigits(applicableTotalCount)} مدرک آماده است (${toFaDigits(progressPercent)}٪)</span>
-            </div>
-            <div class="mypath-cta-row">
-              <button type="button" class="mypath-btn-primary" id="mypath-go-checklist">
-                ${ICONS.listCheck}
-                <span>رفتن به چک‌لیست من</span>
-              </button>
-              <button type="button" class="mypath-btn-secondary" id="mypath-go-map">
-                ${ICONS.mapPin}
-                <span>مشاهده ساختمان روی نقشه</span>
-              </button>
-            </div>
-          </div>
+    panel.innerHTML = `
+      <div class="card step-surface">
+        <div class="step-surface-head">
+          <span class="step-kicker-pill">قدم ۱ از ۵</span>
+          <h2 class="step-surface-title">چه رشته‌ای قبول شدی؟</h2>
+          <p class="step-surface-desc">رشته و شرایط پذیرشت را مشخص کن تا فقط تاریخ، مکان و مدارک مربوط به خودت نمایش داده شود.</p>
         </div>
-      `
-      : `
-        <div class="mypath-placeholder">
-          <span>با انتخاب رشته و نیمسال قبولی، تاریخ دقیق مراجعه حضوری، ساختمان ثبت‌نام و مقصد شما روی نقشه فوراً مشخص می‌شود.</span>
-          <div class="mypath-progress-pill${progressPercent === 100 && applicableTotalCount > 0 ? " is-complete" : ""}">
-            ${ICONS.listCheck}
-            <span>چک‌لیست شما: ${toFaDigits(applicableCompletedCount)} از ${toFaDigits(applicableTotalCount)} مدرک آماده است (${toFaDigits(progressPercent)}٪)</span>
-          </div>
-        </div>
-      `;
 
-    card.innerHTML = `
-      <div class="mypath-header">
-        <div class="mypath-title-wrap">
-          <span class="mypath-icon-badge">${ICONS.compass}</span>
-          <div>
-            <h2 class="mypath-title" id="heading-my-path">مسیر اختصاصی من (تاریخ و مکان دقیق شما)</h2>
-            <p class="mypath-subtitle">رشته و شرایط خود را مشخص کنید تا کل راهنما، چک‌لیست و نقشه برایتان شخصی‌سازی شود.</p>
-          </div>
-        </div>
-      </div>
-
-      <div class="mypath-field-group">
-        <label for="my-path-major-select" class="mypath-field-label">۱. رشته و نیمسال قبولی:</label>
-        <div class="mypath-select-wrap">
-          <select id="my-path-major-select" class="mypath-select">
-            <option value="">— انتخاب رشته و نیمسال قبولی —</option>
+        <div class="wizard-form-block">
+          <label for="step1-major-select" class="wizard-field-label">۱. انتخاب رشته و نیمسال قبولی:</label>
+          <select id="step1-major-select" class="mypath-select">
+            <option value="">— رشته و نیمسال قبولی خود را انتخاب کنید —</option>
             ${optionsHtml}
           </select>
         </div>
-      </div>
 
-      <div class="mypath-field-group">
-        <span class="mypath-field-label">۲. شرایط ویژه شما (اختیاری — چندانتخابی):</span>
-        <div class="mypath-cond-chips" role="group" aria-label="انتخاب سریع شرایط پذیرش">
-          ${quickChipsHtml}
+        <div class="wizard-form-block">
+          <div class="wizard-field-label-row">
+            <span class="wizard-field-label">۲. شرایط پذیرش تو (اختیاری — چندانتخابی):</span>
+            <span class="live-docs-badge">چک‌لیست اختصاصی شما: ${toFaDigits(applicableTotalCount)} مدرک</span>
+          </div>
+          <div class="profile-chips-grid" role="group" aria-label="شرایط پذیرش">
+            ${chipsHtml}
+          </div>
+        </div>
+
+        <div class="step1-cta-block">
+          <button type="button" class="btn-primary-lg" id="step1-submit-btn">
+            <span>ساخت مسیر اختصاصی من</span>
+            <span aria-hidden="true">←</span>
+          </button>
+          ${
+            !state.selectedMajorId
+              ? `<button type="button" class="btn-skip-link" id="step1-skip-btn">رد کردن این قدم و ادامه بدون انتخاب رشته</button>`
+              : ""
+          }
         </div>
       </div>
-
-      ${resultHtml}
     `;
 
-    const selectEl = card.querySelector("#my-path-major-select");
-    selectEl.addEventListener("change", (e) => {
+    panel.querySelector("#step1-major-select").addEventListener("change", (e) => {
       selectMajor(e.target.value);
     });
 
-    card.querySelectorAll("[data-mypath-cond]").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        toggleCondition(btn.dataset.mypathCond);
-      });
+    panel.querySelectorAll("[data-step1-cond]").forEach((btn) => {
+      btn.addEventListener("click", () => toggleCondition(btn.dataset.step1Cond));
     });
 
-    const goChecklistBtn = card.querySelector("#mypath-go-checklist");
-    if (goChecklistBtn) {
-      goChecklistBtn.addEventListener("click", () => {
-        const target = document.getElementById("section-checklist");
-        if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
-      });
-    }
+    panel.querySelector("#step1-submit-btn").addEventListener("click", () => {
+      navigateTo(2);
+    });
 
-    const goMapBtn = card.querySelector("#mypath-go-map");
-    if (goMapBtn && activeMajor) {
-      goMapBtn.addEventListener("click", () => {
-        focusMapPin(activeMajor.mapPinId, true);
-      });
+    const skipBtn = panel.querySelector("#step1-skip-btn");
+    if (skipBtn) {
+      skipBtn.addEventListener("click", () => navigateTo(2));
     }
   }
 
   // ==========================================================================
-  // ۱-ب. بخش تقویم و تایملاین جامع ثبت‌نام
+  // قدم ۲: «زمان و مکان دقیق ثبت‌نام تو»
   // ==========================================================================
-  function renderTimeline() {
-    const listEl = document.getElementById("registration-timeline-list");
-    const noticeEl = document.getElementById("registration-timeline-notice");
-    const tl = DATA.timeline;
-    if (!listEl || !tl) return;
+  function renderStep2() {
+    const panel = document.getElementById("panel-step-2");
+    if (!panel) return;
 
-    listEl.innerHTML = tl.stages
-      .map(
-        (stage) => `
-        <li class="timeline-stage">
-          <div class="timeline-stage-head">
-            <span class="timeline-step-num">${toFaDigits(stage.step)}</span>
-            <span class="timeline-date-pill">${ICONS.calendar}<span>${toFaDigits(stage.date)}</span></span>
+    const major = getActiveMajor();
+    const isSecondSem = major && /نیمسال دوم/.test(major.label);
+
+    let inPersonCardHtml = "";
+    if (major) {
+      inPersonCardHtml = `
+        <article class="card step2-highlight-card">
+          <div class="step2-card-kicker">${ICONS.calendar}<span>روز و محل مراجعه حضوری تو (${toFaDigits(major.label)})</span></div>
+          ${
+            major.warningBanner
+              ? `<div class="mypath-warning-banner" role="alert">${ICONS.alert}<span>${toFaDigits(major.warningBanner)}</span></div>`
+              : ""
+          }
+          <div class="step2-date-hero">${toFaDigits(major.date)}</div>
+          <div class="step2-venue-block">
+            <div class="step2-venue-name">${ICONS.mapPin}<span>${toFaDigits(major.building)}</span></div>
+            <p class="step2-venue-address">${toFaDigits(major.address)}</p>
           </div>
-          <h3 class="timeline-stage-title">${toFaDigits(stage.title)}</h3>
-          ${stage.note ? `<p class="timeline-stage-note">${toFaDigits(stage.note)}</p>` : ""}
-        </li>
-      `
-      )
-      .join("");
+          <div class="step2-card-actions">
+            <span class="attendance-required-badge">${ICONS.userCheck}<span>حضور شخص پذیرفته‌شده الزامی است</span></span>
+            <button type="button" class="mypath-btn-secondary" id="step2-show-map-btn">
+              ${ICONS.mapPin}
+              <span>نمایش ساختمان روی نقشه</span>
+            </button>
+          </div>
+        </article>
+      `;
+    } else {
+      const allMajorsRows = DATA.majors
+        .map(
+          (m) => `
+          <li class="all-majors-row">
+            <div>
+              <div class="all-majors-name">${toFaDigits(m.label)}</div>
+              <div class="all-majors-venue">${toFaDigits(m.building)}</div>
+            </div>
+            <span class="faculty-schedule-date">${toFaDigits(m.date)}</span>
+          </li>
+        `
+        )
+        .join("");
 
-    if (noticeEl && tl.noticeText) {
-      noticeEl.innerHTML = `
-        ${ICONS.info}
-        <div>
-          <strong>${toFaDigits(tl.noticeTitle)}</strong>
-          <span>${toFaDigits(tl.noticeText)}</span>
-        </div>
+      inPersonCardHtml = `
+        <article class="card step2-empty-major-card">
+          <p class="step2-empty-major-text">هنوز رشته‌ای انتخاب نکرده‌اید تا تاریخ و نشانی دقیق فقط برای شما نمایش داده شود.</p>
+          <button type="button" class="mypath-btn-primary" id="step2-pick-major-btn">انتخاب رشته در قدم ۱</button>
+
+          <details class="all-majors-details">
+            <summary class="all-majors-summary">مشاهده جدول کامل تاریخ و مکان همه ۲۰ رشته</summary>
+            <ul class="all-majors-list">${allMajorsRows}</ul>
+          </details>
+        </article>
       `;
     }
-  }
 
-  // ==========================================================================
-  // ۲. Scroll-Spy هوشمند برای هر دو نوار ناوبری (دسکتاپ بالا + موبایل پایین)
-  // ==========================================================================
-  function initScrollSpy() {
-    const sectionIds = [
-      "section-my-path",
-      "section-timeline",
-      "section-checklist",
-      "section-stepper",
-      "section-campus",
-      "section-status-faq"
-    ];
+    panel.innerHTML = `
+      <div class="step-page-stack">
+        <div class="step-surface-head">
+          <span class="step-kicker-pill">قدم ۲ از ۵</span>
+          <h2 class="step-surface-title">زمان و مکان دقیق ثبت‌نام تو</h2>
+          <p class="step-surface-desc">ثبت‌نام در دو مرحله انجام می‌شود: ابتدا آنلاین در هم‌آوا، سپس حضوری در دانشکده.</p>
+        </div>
 
-    const sections = sectionIds.map((id) => document.getElementById(id)).filter(Boolean);
-    const desktopLinks = Array.from(document.querySelectorAll(".jump-link"));
-    const mobileTabs = Array.from(document.querySelectorAll(".bottom-tab"));
+        <!-- کارت ثبت‌نام آنلاین -->
+        <article class="card step2-online-card">
+          <div class="step2-card-kicker">${ICONS.external}<span>۱. ثبت‌نام الکترونیکی و رفع نواقص (هم‌آوا)</span></div>
+          <div class="step2-date-hero">دوشنبه ۱۴۰۵/۰۹/۰۲ تا پنجشنبه ۱۴۰۵/۰۹/۰۵</div>
+          <p class="step2-card-note">
+            تمامی پذیرفته‌شدگان (مهر ۱۴۰۵، بهمن ۱۴۰۵ و نیمسال اول ۱۴۰۷–۱۴۰۶) باید در همین بازه مدارک را بارگذاری کنند و هر روز وضعیت تایید مدارک را چک نمایند.
+          </p>
+          <div class="step2-card-actions">
+            <a href="${window.OFFICIAL_LINKS.HAMAVA_URL}" target="_blank" rel="noopener noreferrer" class="official-link-btn">
+              ${ICONS.external}
+              <span>ورود به سامانه جامع آموزشی هم‌آوا</span>
+            </a>
+          </div>
+        </article>
 
-    function setActiveSection(id) {
-      desktopLinks.forEach((link) => {
-        const match = link.dataset.target === id;
-        link.classList.toggle("is-active", match);
-        if (match) link.setAttribute("aria-current", "location");
-        else link.removeAttribute("aria-current");
-      });
+        <!-- کارت مراجعه حضوری اختصاصی -->
+        ${inPersonCardHtml}
 
-      // در نوار موبایل، تقویم و مسیر من هر دو روی «مسیر من» یا نزدیک‌ترین تب مپ می‌شوند
-      const mobileTarget = id === "section-timeline" ? "section-my-path" : id;
-      mobileTabs.forEach((tab) => {
-        const match = tab.dataset.target === mobileTarget;
-        tab.classList.toggle("is-active", match);
-        if (match) tab.setAttribute("aria-current", "location");
-        else tab.removeAttribute("aria-current");
+        <!-- کارت خلاصه آزمون زبان و شروع کلاس‌ها -->
+        <div class="step2-mini-grid">
+          <article class="card step2-mini-card">
+            <span class="step2-mini-label">آزمون تعیین سطح زبان</span>
+            <strong class="step2-mini-value">${isSecondSem ? "بهمن‌ماه ۱۴۰۵" : "چهارشنبه ۱۴۰۵/۰۹/۱۱"}</strong>
+            <span class="step2-mini-note">${isSecondSem ? "ویژه ورودی‌های نیمسال دوم پیش از انتخاب واحد بهمن" : "ویژه نیمسال اول (نیمسال دومی‌ها در بهمن‌ماه)"}</span>
+          </article>
+          <article class="card step2-mini-card">
+            <span class="step2-mini-label">شروع کلاس‌ها</span>
+            <strong class="step2-mini-value">${isSecondSem ? "بهمن‌ماه ۱۴۰۵" : "شنبه ۱۴۰۵/۰۹/۱۴"}</strong>
+            <span class="step2-mini-note">برنامه کلاسی پس از انتخاب واحد حضوری در هم‌آوا نمایش داده می‌شود.</span>
+          </article>
+        </div>
+      </div>
+    `;
+
+    const showMapBtn = panel.querySelector("#step2-show-map-btn");
+    if (showMapBtn && major) {
+      showMapBtn.addEventListener("click", () => {
+        openDrawer("map");
+        renderFloatingPinCard(major.mapPinId);
       });
     }
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const visible = entries
-          .filter((entry) => entry.isIntersecting)
-          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
-        if (visible.length > 0) {
-          setActiveSection(visible[0].target.id);
-        }
-      },
-      {
-        rootMargin: "-15% 0px -65% 0px",
-        threshold: 0
-      }
-    );
-
-    sections.forEach((sec) => observer.observe(sec));
-
-    [...desktopLinks, ...mobileTabs].forEach((link) => {
-      link.addEventListener("click", () => {
-        setActiveSection(link.dataset.target);
-      });
-    });
+    const pickBtn = panel.querySelector("#step2-pick-major-btn");
+    if (pickBtn) {
+      pickBtn.addEventListener("click", () => navigateTo(1));
+    }
   }
 
   // ==========================================================================
-  // ۳. بخش اول: چک‌لیست هوشمند (Progressive Disclosure + تاییدیه بازنشانی)
+  // قدم ۳: «آماده‌سازی مدارک اختصاصی تو» (چک‌لیست هوشمند با ریاضی دقیق)
   // ==========================================================================
-  function renderOfficialNotice() {
-    const box = document.getElementById("official-notice-box");
-    const notice = DATA.officialNotice;
-    if (!box || !notice) return;
-
-    const linksHtml = (notice.links || [])
-      .map(
-        (lnk, i) =>
-          `<a href="${lnk.url}" target="_blank" rel="noopener noreferrer" class="official-link-btn${i > 0 ? " is-secondary" : ""}">${ICONS.external}<span>${toFaDigits(lnk.label)}</span></a>`
-      )
-      .join("");
-
-    box.innerHTML = `
-      <div class="official-notice-card">
-        <p class="official-notice-text">${toFaDigits(notice.text)}</p>
-        <div class="official-notice-links">${linksHtml}</div>
-      </div>
-      ${
-        notice.withdrawalWarning
-          ? `<div class="alert-callout" role="note">${ICONS.alert}<span>${toFaDigits(notice.withdrawalWarning)}</span></div>`
-          : ""
-      }
-    `;
-  }
-
   function renderPhoneChips(phones, ext) {
     const chips = (phones || [])
       .map(
@@ -636,7 +689,6 @@
 
     const wrap = document.createElement("div");
     wrap.className = "checklist-tuition-inline";
-
     const isOpen = state.tuitionTableOpen;
 
     const desktopRows = tData.rows
@@ -679,30 +731,20 @@
       )
       .join("");
 
-    const notesHtml = (tData.notes || [])
-      .map((n) => `<li>${toFaDigits(n)}</li>`)
-      .join("");
+    const notesHtml = (tData.notes || []).map((n) => `<li>${toFaDigits(n)}</li>`).join("");
 
     wrap.innerHTML = `
       <div class="tuition-accordion${isOpen ? " is-open" : ""}">
-        <button type="button" class="tuition-accordion-trigger" aria-expanded="${isOpen}" aria-controls="tuition-table-panel">
-          <span class="tuition-trigger-title">
-            ${ICONS.table}
-            <span>${toFaDigits(tData.buttonTitle)}</span>
-          </span>
+        <button type="button" class="tuition-accordion-trigger" aria-expanded="${isOpen}">
+          <span class="tuition-trigger-title">${ICONS.table}<span>${toFaDigits(tData.buttonTitle)}</span></span>
           ${ICONS.chevron}
         </button>
-        <div class="tuition-accordion-panel" id="tuition-table-panel">
+        <div class="tuition-accordion-panel">
           <div class="tuition-accordion-inner">
             <div class="tuition-table-scroll">
               <table class="tuition-table">
                 <thead>
-                  <tr>
-                    <th>رشته</th>
-                    <th>شهریه علی‌الحساب</th>
-                    <th>میزان سفته</th>
-                    <th>مسئول و شماره پیگیری</th>
-                  </tr>
+                  <tr><th>رشته</th><th>شهریه علی‌الحساب</th><th>میزان سفته</th><th>مسئول و شماره پیگیری</th></tr>
                 </thead>
                 <tbody>${desktopRows}</tbody>
               </table>
@@ -726,24 +768,6 @@
     return wrap;
   }
 
-  function getConditionAddedCount(condId) {
-    const selected = Array.from(state.selectedConditions);
-    return DATA.checklist.filter((item) => {
-      if (item.condition !== condId) return false;
-      const isExcluded = (item.excludeWhen || []).some((c) => selected.includes(c));
-      return !isExcluded;
-    }).length;
-  }
-
-  function getMandatoryActiveCount() {
-    const selected = Array.from(state.selectedConditions);
-    return DATA.checklist.filter((item) => {
-      if (item.condition !== "mandatory") return false;
-      const isExcluded = (item.excludeWhen || []).some((c) => selected.includes(c));
-      return !isExcluded;
-    }).length;
-  }
-
   function itemHasDetails(item) {
     return Boolean(
       item.highlightBox ||
@@ -757,82 +781,9 @@
     );
   }
 
-  function updateToggleAllButton(displayedItems) {
-    const btn = document.getElementById("checklist-toggle-all-btn");
-    const label = document.getElementById("checklist-toggle-all-label");
-    if (!btn || !label) return;
-    const expandableIds = displayedItems.filter(itemHasDetails).map((i) => i.id);
-    if (expandableIds.length === 0) {
-      setHidden(btn, true);
-      return;
-    }
-    setHidden(btn, false);
-    const allOpen = expandableIds.every((id) => state.expandedDocs.has(id));
-    label.textContent = allOpen ? "بستن همه جزئیات" : "باز کردن همه جزئیات";
-    btn.classList.toggle("is-all-open", allOpen);
-  }
-
-  function renderProfileBuilder() {
-    const container = document.getElementById("checklist-profile-builder");
-    if (!container || !DATA.checklistConditions) return;
-
-    const mandatoryCount = getMandatoryActiveCount();
-
-    const chipsHtml = DATA.checklistConditions
-      .map((cond) => {
-        const isActive = state.selectedConditions.has(cond.id);
-        const count = getConditionAddedCount(cond.id);
-        return `
-          <button
-            type="button"
-            class="profile-chip${isActive ? " is-active" : ""}"
-            data-condition-id="${cond.id}"
-            aria-pressed="${isActive}"
-          >
-            <span class="profile-chip-top">
-              <span class="profile-chip-status-icon">${isActive ? ICONS.check : ICONS.plus}</span>
-              <span class="profile-chip-label">${toFaDigits(cond.label)}</span>
-              <span class="profile-chip-count">+${toFaDigits(count)} مدرک</span>
-            </span>
-            ${cond.hint ? `<span class="profile-chip-hint">${toFaDigits(cond.hint)}</span>` : ""}
-          </button>
-        `;
-      })
-      .join("");
-
-    container.innerHTML = `
-      <div class="profile-builder-head">
-        <h3 class="profile-builder-title">۱. شرایط خود را انتخاب کنید (امکان انتخاب چند گزینه همزمان):</h3>
-        <p class="profile-builder-subtitle">
-          مدارک الزامی پایه به صورت خودکار برای همه فعال است. اگر هر یک از شرایط زیر را دارید، رویش کلیک کنید تا مدارکش به چک‌لیست شما اضافه شود:
-        </p>
-      </div>
-
-      <div class="profile-mandatory-row">
-        <span class="profile-mandatory-badge">
-          ${ICONS.lock}
-          <span>مدارک پایه برای همه فعال است</span>
-          <span class="profile-mandatory-count">${toFaDigits(mandatoryCount)} مدرک</span>
-        </span>
-      </div>
-
-      <div class="profile-chips-grid" role="group" aria-label="شرایط پذیرش من">
-        ${chipsHtml}
-      </div>
-    `;
-
-    container.querySelectorAll("[data-condition-id]").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        toggleCondition(btn.dataset.conditionId);
-      });
-    });
-  }
-
-  function renderChecklist() {
-    const listEl = document.getElementById("checklist-list");
-    const emptyEl = document.getElementById("checklist-empty");
-    const progressBlock = document.getElementById("checklist-progress-block");
-    const celebrationEl = document.getElementById("checklist-celebration");
+  function renderStep3() {
+    const panel = document.getElementById("panel-step-3");
+    if (!panel) return;
 
     const {
       applicableCompletedCount,
@@ -841,31 +792,131 @@
       displayedItems
     } = getChecklistStats();
 
-    // به‌روزرسانی نوار پیشرفت و پیام تبریک ۱۰۰٪
-    document.getElementById("checklist-progress-text").textContent =
-      `${toFaDigits(applicableCompletedCount)} از ${toFaDigits(applicableTotalCount)} مدرک مربوط به شما آماده است (${toFaDigits(progressPercent)}٪)`;
-    document.getElementById("checklist-progress-percent").textContent = `${toFaDigits(progressPercent)}٪`;
-    document.getElementById("checklist-progress-fill").style.width = `${progressPercent}%`;
-    document.getElementById("checklist-progressbar").setAttribute("aria-valuenow", String(progressPercent));
-
     const isComplete = applicableTotalCount > 0 && progressPercent === 100;
-    if (progressBlock) {
-      setHidden(progressBlock, false);
-      progressBlock.classList.toggle("is-complete", isComplete);
-    }
-    setHidden(celebrationEl, !isComplete);
+    const expandableIds = displayedItems.filter(itemHasDetails).map((i) => i.id);
+    const allOpen = expandableIds.length > 0 && expandableIds.every((id) => state.expandedDocs.has(id));
 
-    updateToggleAllButton(displayedItems);
+    const condChipsHtml = DATA.checklistConditions
+      .map((cond) => {
+        const isActive = state.selectedConditions.has(cond.id);
+        const count = getConditionAddedCount(cond.id);
+        return `
+          <button type="button" class="mypath-cond-chip${isActive ? " is-active" : ""}" data-step3-cond="${cond.id}" aria-pressed="${isActive}">
+            ${isActive ? ICONS.check : ICONS.plus}
+            <span>${toFaDigits(cond.label.split("(")[0].trim())} (+${toFaDigits(count)})</span>
+          </button>
+        `;
+      })
+      .join("");
 
-    listEl.innerHTML = "";
+    panel.innerHTML = `
+      <div class="step-page-stack">
+        <div class="step-surface-head">
+          <span class="step-kicker-pill">قدم ۳ از ۵</span>
+          <h2 class="step-surface-title">آماده‌سازی مدارک اختصاصی تو</h2>
+          <p class="step-surface-desc">فقط مدارک مربوط به شرایط خودت نمایش داده می‌شود؛ تیک‌ها در مرورگرت ذخیره می‌شوند.</p>
+        </div>
+
+        <div class="card checklist-card">
+          <!-- بخش جمع‌شونده ویرایش شرایط پذیرش -->
+          <div class="step3-cond-bar">
+            <button type="button" class="step3-cond-toggle" id="step3-cond-toggle" aria-expanded="${state.step3ConditionsOpen}">
+              <span class="step3-cond-toggle-title">
+                ${ICONS.sliders}
+                <span>ویرایش شرایط پذیرش (شهریه‌پرداز، متعهد، ایثارگر، ...)</span>
+              </span>
+              ${ICONS.chevron}
+            </button>
+            <div class="step3-cond-panel${state.step3ConditionsOpen ? " is-open" : ""}" id="step3-cond-panel">
+              <div class="step3-cond-panel-inner">
+                <div class="mypath-cond-chips">${condChipsHtml}</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- نوار پیشرفت دقیق + فیلتر وضعیت نمایش -->
+          <div class="checklist-toolbar">
+            <div class="progress-block${isComplete ? " is-complete" : ""}" id="step3-progress-block">
+              <div class="progress-meta">
+                <span class="progress-label">${toFaDigits(applicableCompletedCount)} از ${toFaDigits(applicableTotalCount)} مدرک مربوط به شما آماده است (${toFaDigits(progressPercent)}٪)</span>
+                <span class="progress-percent">${toFaDigits(progressPercent)}٪</span>
+              </div>
+              <div class="progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${progressPercent}">
+                <div class="progress-fill" style="width: ${progressPercent}%"></div>
+              </div>
+              ${
+                isComplete
+                  ? `<div class="progress-celebration" role="status" aria-live="polite">عالیه! تمام مدارک مورد نیاز شما برای روز ثبت‌نام آماده است 🎉</div>`
+                  : ""
+              }
+            </div>
+
+            <div class="checklist-controls">
+              <div class="filter-group" role="group" aria-label="فیلتر وضعیت نمایش مدارک">
+                <button type="button" class="chip-btn${state.statusFilter === "all" ? " is-active" : ""}" data-s3-filter="all">همه</button>
+                <button type="button" class="chip-btn${state.statusFilter === "remaining" ? " is-active" : ""}" data-s3-filter="remaining">باقیمانده</button>
+                <button type="button" class="chip-btn${state.statusFilter === "completed" ? " is-active" : ""}" data-s3-filter="completed">آماده‌شده</button>
+              </div>
+              <div class="checklist-utility-actions">
+                ${
+                  expandableIds.length > 0
+                    ? `<button type="button" class="btn-text-subtle${allOpen ? " is-all-open" : ""}" id="s3-toggle-all-btn">
+                        ${ICONS.chevron}
+                        <span>${allOpen ? "بستن همه جزئیات" : "باز کردن همه جزئیات"}</span>
+                      </button>`
+                    : ""
+                }
+                <button type="button" class="btn-text-subtle" id="s3-reset-btn">
+                  ${ICONS.reset}
+                  <span>بازنشانی</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- تاییدیه دو مرحله‌ای درون‌صفحه‌ای -->
+            <div class="reset-confirm-bar hidden" id="s3-reset-confirm" role="alertdialog" aria-live="polite" hidden>
+              <span class="reset-confirm-text">همه تیک‌ها پاک شوند؟</span>
+              <div class="reset-confirm-actions">
+                <button type="button" class="btn-danger-sm" id="s3-reset-yes">بله، پاک کن</button>
+                <button type="button" class="btn-neutral-sm" id="s3-reset-no">انصراف</button>
+              </div>
+            </div>
+          </div>
+
+          <ul class="checklist-list" id="s3-checklist-list"></ul>
+          <p class="empty-state hidden" id="s3-checklist-empty" hidden></p>
+        </div>
+
+        <!-- دکمه چاپ + هشدار انصراف -->
+        <div class="step3-footer-tools">
+          <button type="button" class="mypath-btn-secondary" id="s3-print-btn">
+            ${ICONS.print}
+            <span>چاپ / PDF چک‌لیست من</span>
+          </button>
+          <a href="${window.OFFICIAL_LINKS.EDUV_OFFICIAL}" target="_blank" rel="noopener noreferrer" class="official-link-btn is-secondary">
+            ${ICONS.external}
+            <span>دانلود فایل فرم‌های رسمی دانشگاه</span>
+          </a>
+        </div>
+
+        <div class="alert-callout" role="note">
+          ${ICONS.alert}
+          <span>${toFaDigits(DATA.officialNotice.withdrawalWarning)}</span>
+        </div>
+      </div>
+    `;
+
+    // رندر آیتم‌های چک‌لیست
+    const listEl = panel.querySelector("#s3-checklist-list");
+    const emptyEl = panel.querySelector("#s3-checklist-empty");
+
     if (displayedItems.length === 0) {
-      if (state.statusFilter === "remaining") {
-        emptyEl.textContent = "عالیه! هیچ مدرک باقیمانده‌ای ندارید 🎉";
-      } else if (state.statusFilter === "completed") {
-        emptyEl.textContent = "هنوز هیچ مدرکی را به عنوان آماده‌شده تیک نزده‌اید.";
-      } else {
-        emptyEl.textContent = "موردی برای نمایش وجود ندارد.";
-      }
+      emptyEl.textContent =
+        state.statusFilter === "remaining"
+          ? "عالیه! هیچ مدرک باقیمانده‌ای ندارید 🎉"
+          : state.statusFilter === "completed"
+          ? "هنوز هیچ مدرکی را تیک نزده‌اید."
+          : "موردی برای نمایش وجود ندارد.";
       setHidden(emptyEl, false);
     } else {
       setHidden(emptyEl, true);
@@ -877,10 +928,10 @@
         lastGroup = item.group;
         const groupLi = document.createElement("li");
         groupLi.className = "checklist-group-header";
-        const isExtraGroup = item.condition !== "mandatory";
+        const isExtra = item.condition !== "mandatory";
         groupLi.innerHTML = `
           <span>${toFaDigits(item.group)}</span>
-          ${isExtraGroup ? `<span class="checklist-group-optional">بر اساس شرایط انتخابی شما</span>` : `<span class="checklist-group-core">الزامی پایه</span>`}
+          <span class="${isExtra ? "checklist-group-optional" : "checklist-group-core"}">${isExtra ? "شرایط انتخابی شما" : "الزامی پایه"}</span>
         `;
         listEl.appendChild(groupLi);
       }
@@ -888,22 +939,17 @@
       const checked = state.checkedDocs.has(item.id);
       const hasDetails = itemHasDetails(item);
       const isExpanded = hasDetails && state.expandedDocs.has(item.id);
-
       const li = document.createElement("li");
       li.className = `checklist-item${checked ? " is-checked" : ""}${isExpanded ? " is-expanded" : ""}`;
-
-      const badgeText = item.guide || item.qty || "";
 
       const highlightHtml = item.highlightBox
         ? `<div class="highlight-callout" role="note">${ICONS.key}<span>${toFaDigits(item.highlightBox)}</span></div>`
         : "";
-
       const subNoteContent = item.subNoteHtml
         ? `<div class="checklist-subnote">${toFaDigitsHtml(item.subNoteHtml)}</div>`
         : item.subNote
         ? `<p class="checklist-subnote">${toFaDigits(item.subNote)}</p>`
         : "";
-
       const fieldsGuideHtml = item.fieldsGuide
         ? `
           <div class="fields-guide-box" role="note">
@@ -914,10 +960,7 @@
                   (row) => `
                   <div class="fields-guide-row">
                     <dt>${toFaDigits(row.label)}:</dt>
-                    <dd>
-                      <strong>${toFaDigits(row.value)}</strong>
-                      ${row.emphasis ? `<span class="fields-guide-emphasis">(${toFaDigits(row.emphasis)})</span>` : ""}
-                    </dd>
+                    <dd><strong>${toFaDigits(row.value)}</strong>${row.emphasis ? `<span class="fields-guide-emphasis">(${toFaDigits(row.emphasis)})</span>` : ""}</dd>
                   </div>
                 `
                 )
@@ -926,13 +969,7 @@
           </div>
         `
         : "";
-
-      const linkItems = item.links
-        ? item.links
-        : item.linkUrl
-        ? [{ label: item.linkText || item.linkUrl, url: item.linkUrl, ltr: true }]
-        : [];
-
+      const linkItems = item.links || [];
       const linksHtml = linkItems.length
         ? `<div class="checklist-links-row">${linkItems
             .map(
@@ -942,20 +979,18 @@
             .join("")}</div>`
         : "";
 
-      const panelId = `doc-details-${item.id}`;
-
       li.innerHTML = `
         <div class="checklist-row-head">
           <label class="checklist-check-area">
             <input type="checkbox" class="checklist-checkbox" data-doc-id="${item.id}" ${checked ? "checked" : ""} />
             <div class="checklist-title-wrap">
               <span class="checklist-title">${toFaDigits(item.title)}</span>
-              ${badgeText ? `<span class="checklist-qty">${toFaDigits(badgeText)}</span>` : ""}
+              ${item.guide ? `<span class="checklist-qty">${toFaDigits(item.guide)}</span>` : ""}
             </div>
           </label>
           ${
             hasDetails
-              ? `<button type="button" class="checklist-detail-toggle" aria-expanded="${isExpanded}" aria-controls="${panelId}">
+              ? `<button type="button" class="checklist-detail-toggle" aria-expanded="${isExpanded}">
                   <span>جزئیات</span>
                   ${ICONS.chevron}
                 </button>`
@@ -965,18 +1000,14 @@
         ${
           hasDetails
             ? `
-          <div class="checklist-details-panel" id="${panelId}">
+          <div class="checklist-details-panel">
             <div class="checklist-details-inner">
               <div class="checklist-details-body">
                 ${highlightHtml}
                 ${subNoteContent}
                 ${fieldsGuideHtml}
                 ${linksHtml}
-                ${
-                  item.warning
-                    ? `<div class="alert-callout" role="note">${ICONS.alert}<span>${toFaDigits(item.warning)}</span></div>`
-                    : ""
-                }
+                ${item.warning ? `<div class="alert-callout" role="note">${ICONS.alert}<span>${toFaDigits(item.warning)}</span></div>` : ""}
               </div>
             </div>
           </div>
@@ -985,14 +1016,12 @@
         }
       `;
 
-      // اتصال جدول شهریه داخل بخش جزئیات آیتم مربوطه
       if (item.attachTuitionTable) {
-        const detailsBody = li.querySelector(".checklist-details-body");
-        const tuitionEl = buildTuitionCollapsibleElement();
-        if (detailsBody && tuitionEl) detailsBody.appendChild(tuitionEl);
+        const body = li.querySelector(".checklist-details-body");
+        const tEl = buildTuitionCollapsibleElement();
+        if (body && tEl) body.appendChild(tEl);
       }
 
-      // تفکیک کامل کلیک: چک‌باکس فقط تیک می‌زند + هنگام تیک زدن جزئیات خودکار جمع می‌شود
       const checkbox = li.querySelector(".checklist-checkbox");
       checkbox.addEventListener("change", () => {
         if (checkbox.checked) {
@@ -1002,12 +1031,10 @@
           state.checkedDocs.delete(item.id);
         }
         saveStoredSet(STORAGE_KEYS.checklist, state.checkedDocs);
-        renderChecklist();
-        renderMyPathCard();
-        updateBottomNavBadge();
+        renderStep3();
+        renderPrintSheet();
       });
 
-      // دکمه جزئیات فقط بخش توضیحات را با انیمیشن نرم باز/بسته می‌کند
       const detailBtn = li.querySelector(".checklist-detail-toggle");
       if (detailBtn) {
         detailBtn.addEventListener("click", (e) => {
@@ -1017,819 +1044,457 @@
           else state.expandedDocs.delete(item.id);
           li.classList.toggle("is-expanded", nowOpen);
           detailBtn.setAttribute("aria-expanded", String(nowOpen));
-          updateToggleAllButton(getChecklistStats().displayedItems);
         });
       }
 
       listEl.appendChild(li);
     });
-  }
 
-  function initChecklistControls() {
-    const filterButtons = document.querySelectorAll("[data-checklist-filter]");
-    filterButtons.forEach((btn) => {
+    // رویدادهای بالای قدم ۳
+    panel.querySelector("#step3-cond-toggle").addEventListener("click", () => {
+      state.step3ConditionsOpen = !state.step3ConditionsOpen;
+      renderStep3();
+    });
+
+    panel.querySelectorAll("[data-step3-cond]").forEach((btn) => {
+      btn.addEventListener("click", () => toggleCondition(btn.dataset.step3Cond));
+    });
+
+    panel.querySelectorAll("[data-s3-filter]").forEach((btn) => {
       btn.addEventListener("click", () => {
-        state.statusFilter = btn.dataset.checklistFilter;
-        filterButtons.forEach((b) => b.classList.toggle("is-active", b === btn));
-        renderChecklist();
+        state.statusFilter = btn.dataset.s3Filter;
+        renderStep3();
       });
     });
 
-    // باز کردن / بستن همه جزئیات
-    const toggleAllBtn = document.getElementById("checklist-toggle-all-btn");
+    const toggleAllBtn = panel.querySelector("#s3-toggle-all-btn");
     if (toggleAllBtn) {
       toggleAllBtn.addEventListener("click", () => {
-        const { displayedItems } = getChecklistStats();
-        const expandableIds = displayedItems.filter(itemHasDetails).map((i) => i.id);
-        const allOpen = expandableIds.every((id) => state.expandedDocs.has(id));
-        if (allOpen) {
-          expandableIds.forEach((id) => state.expandedDocs.delete(id));
-        } else {
-          expandableIds.forEach((id) => state.expandedDocs.add(id));
-        }
-        renderChecklist();
+        if (allOpen) expandableIds.forEach((id) => state.expandedDocs.delete(id));
+        else expandableIds.forEach((id) => state.expandedDocs.add(id));
+        renderStep3();
       });
     }
 
-    // تاییدیه دو مرحله‌ای درون‌صفحه‌ای برای بازنشانی (بدون window.confirm)
-    const resetBtn = document.getElementById("checklist-reset-btn");
-    const confirmBar = document.getElementById("checklist-reset-confirm");
-    const confirmYes = document.getElementById("checklist-reset-confirm-yes");
-    const confirmNo = document.getElementById("checklist-reset-confirm-no");
-
+    const resetBtn = panel.querySelector("#s3-reset-btn");
+    const confirmBar = panel.querySelector("#s3-reset-confirm");
     resetBtn.addEventListener("click", () => {
-      if (state.checkedDocs.size === 0 && state.selectedConditions.size === 0 && state.statusFilter === "all") {
-        showToast("چک‌لیست همین الان در حالت پیش‌فرض است.");
+      if (state.checkedDocs.size === 0) {
+        showToast("هنوز هیچ تیکی نزده‌اید.");
         return;
       }
       setHidden(confirmBar, false);
     });
-
-    confirmNo.addEventListener("click", () => {
-      setHidden(confirmBar, true);
-    });
-
-    confirmYes.addEventListener("click", () => {
+    panel.querySelector("#s3-reset-no").addEventListener("click", () => setHidden(confirmBar, true));
+    panel.querySelector("#s3-reset-yes").addEventListener("click", () => {
       state.checkedDocs.clear();
-      state.selectedConditions.clear();
       state.expandedDocs.clear();
       state.statusFilter = "all";
-      filterButtons.forEach((b) => b.classList.toggle("is-active", b.dataset.checklistFilter === "all"));
       saveStoredSet(STORAGE_KEYS.checklist, state.checkedDocs);
-      saveStoredSet(STORAGE_KEYS.conditions, state.selectedConditions);
-      setHidden(confirmBar, true);
-      syncAllViews();
-      showToast("همه تیک‌ها و شرایط انتخاب‌شده پاک شد.");
+      renderStep3();
+      renderPrintSheet();
+      showToast("همه تیک‌های چک‌لیست پاک شد.");
     });
+
+    panel.querySelector("#s3-print-btn").addEventListener("click", triggerPrintChecklist);
   }
 
   // ==========================================================================
-  // ۴. بخش دوم: مسیر مرحله‌به‌مرحله + برنامه هر دانشکده + اتصال به نقشه
+  // قدم ۴: «روز ثبت‌نام حضوری و نقشه پردیس»
   // ==========================================================================
-  function getActiveFaculty() {
-    if (!DATA.faculties || !DATA.faculties.length) return null;
-    return DATA.faculties.find((f) => f.id === state.selectedFacultyId) || DATA.faculties[0];
-  }
+  let inlineMapCtrl = null;
 
-  function renderFacultySelector() {
-    const box = document.getElementById("faculty-selector-box");
-    if (!box || !DATA.faculties || !DATA.faculties.length) return;
-    const active = getActiveFaculty();
+  function renderStep4() {
+    const panel = document.getElementById("panel-step-4");
+    if (!panel) return;
 
-    const scheduleHtml = (active.schedule || [])
-      .map(
-        (row) => `
-        <li class="faculty-schedule-row">
-          <span class="faculty-schedule-program">${toFaDigits(row.program)}</span>
-          <span class="faculty-schedule-date">${ICONS.calendar}<span>${toFaDigits(row.date)}</span></span>
-        </li>
-      `
-      )
-      .join("");
-
-    box.innerHTML = `
-      ${
-        DATA.facultyCommonNote
-          ? `<div class="faculty-common-note" role="note">${ICONS.info}<span>${toFaDigits(DATA.facultyCommonNote)}</span></div>`
-          : ""
-      }
-      <div class="faculty-selector-label">رشته / دانشکده قبولی خود را انتخاب کنید تا روز، تاریخ و نشانی دقیق ثبت‌نام حضوری نمایش داده شود:</div>
-      <div class="faculty-chips-row" role="group" aria-label="انتخاب دانشکده">
-        ${DATA.faculties
-          .map(
-            (f) =>
-              `<button type="button" class="chip-btn${f.id === active.id ? " is-active" : ""}" data-faculty-id="${f.id}">${f.label}</button>`
-          )
-          .join("")}
-      </div>
-
-      <div class="faculty-details-panel">
-        <div class="faculty-details-top">
-          ${
-            active.venueAlertTag
-              ? `<span class="faculty-alert-tag">${ICONS.alert}<span>${toFaDigits(active.venueAlertTag)}</span></span>`
-              : ""
-          }
-          <div class="faculty-venue-note${active.venueWarning ? " is-warning" : ""}">
-            ${active.venueWarning ? ICONS.alert : ICONS.mapPin}
-            <div>
-              <strong>نشانی دقیق محل ثبت‌نام (${active.label}):</strong> ${toFaDigits(active.venueNote)}
-            </div>
-          </div>
-          ${
-            active.attendanceBadge
-              ? `<span class="attendance-required-badge">${ICONS.userCheck}<span>${toFaDigits(active.attendanceBadge)}</span></span>`
-              : ""
-          }
-        </div>
-
-        ${
-          scheduleHtml
-            ? `
-          <div class="faculty-schedule-block">
-            <div class="faculty-schedule-heading">برنامه دقیق روز و تاریخ مراجعه (${active.label}):</div>
-            <ul class="faculty-schedule-list">${scheduleHtml}</ul>
-          </div>
-        `
-            : ""
-        }
-      </div>
-    `;
-
-    box.querySelectorAll("[data-faculty-id]").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        state.selectedFacultyId = btn.dataset.facultyId;
-        try {
-          localStorage.setItem(STORAGE_KEYS.faculty, state.selectedFacultyId);
-        } catch {
-          // ignore
-        }
-        renderFacultySelector();
-        renderStepper();
-      });
-    });
-  }
-
-  function renderStepper() {
-    const listEl = document.getElementById("stepper-list");
-    const total = DATA.steps.length;
+    const faculty = getActiveFaculty();
+    const major = getActiveMajor();
     const doneCount = DATA.steps.filter((s) => state.doneSteps.has(s.id)).length;
-    document.getElementById("stepper-progress-text").textContent =
-      `${toFaDigits(doneCount)} از ${toFaDigits(total)} مرحله انجام شده`;
 
-    const activeFaculty = getActiveFaculty();
-    listEl.innerHTML = "";
+    const stepsHtml = DATA.steps
+      .map((step, idx) => {
+        const isDone = state.doneSteps.has(step.id);
+        let loc = step.location || "";
+        let pinId = step.mapPinId || null;
+        if (faculty && step.useFacultyVenue === "step1") {
+          loc = faculty.step1Location;
+          pinId = faculty.mapPinId;
+        } else if (faculty && step.useFacultyVenue === "step2") {
+          loc = faculty.step2Location;
+          pinId = faculty.mapPinId;
+        }
 
-    DATA.steps.forEach((step, idx) => {
-      const isDone = state.doneSteps.has(step.id);
-      const li = document.createElement("li");
-      li.className = `step-item${isDone ? " is-done" : ""}`;
-
-      let resolvedLocation = step.location || "";
-      let resolvedPinId = step.mapPinId || null;
-      if (activeFaculty && step.useFacultyVenue === "step1") {
-        resolvedLocation = activeFaculty.step1Location;
-        resolvedPinId = activeFaculty.mapPinId;
-      } else if (activeFaculty && step.useFacultyVenue === "step2") {
-        resolvedLocation = activeFaculty.step2Location;
-        resolvedPinId = activeFaculty.mapPinId;
-      }
-
-      li.innerHTML = `
-        <div class="step-node" aria-hidden="true">
-          ${isDone ? ICONS.check : toFaDigits(idx + 1)}
-        </div>
-        <article class="card step-card">
-          <div class="step-card-header">
-            <div>
+        return `
+          <li class="step-item${isDone ? " is-done" : ""}">
+            <div class="step-node" aria-hidden="true">${isDone ? ICONS.check : toFaDigits(idx + 1)}</div>
+            <article class="card step-card">
               <div class="step-kicker">مرحله ${toFaDigits(idx + 1)}</div>
               <h3 class="step-title">${toFaDigits(step.title)}</h3>
-              <div class="step-location">
-                ${ICONS.mapPin}
-                <span>${toFaDigits(resolvedLocation)}</span>
+              <div class="step-location">${ICONS.mapPin}<span>${toFaDigits(loc)}</span></div>
+              <p class="step-meta-row"><span class="step-meta-key">مدارک:</span> ${toFaDigits(step.docs)}</p>
+              ${step.tip ? `<div class="step-tip">نکته: ${toFaDigits(step.tip)}</div>` : ""}
+              <div class="step-actions">
+                <button type="button" class="btn-step-done" data-s4-step="${step.id}" aria-pressed="${isDone}">
+                  ${ICONS.check}
+                  <span>${isDone ? "انجام شد" : "انجام دادم"}</span>
+                </button>
+                ${
+                  pinId
+                    ? `<button type="button" class="btn-map-jump" data-s4-pin="${pinId}">
+                        ${ICONS.mapPin}
+                        <span>نمایش روی نقشه</span>
+                      </button>`
+                    : ""
+                }
+              </div>
+            </article>
+          </li>
+        `;
+      })
+      .join("");
+
+    panel.innerHTML = `
+      <div class="step-page-stack">
+        <div class="step-surface-head">
+          <div class="step-head-row">
+            <span class="step-kicker-pill">قدم ۴ از ۵</span>
+            <span class="stepper-counter">${toFaDigits(doneCount)} از ${toFaDigits(DATA.steps.length)} مرحله انجام شده</span>
+          </div>
+          <h2 class="step-surface-title">روز ثبت‌نام حضوری و نقشه پردیس</h2>
+          <p class="step-surface-desc">
+            ${major ? `مراحل مخصوص ${toFaDigits(major.label)} در ${toFaDigits(major.building)}` : "مراحل مراجعه حضوری داخل دانشکده و نقشه ساختمان‌های پردیس."}
+          </p>
+        </div>
+
+        <!-- چک‌لیست ۲ خطی وسایل همراه -->
+        <div class="carry-checklist-box" role="note">
+          ${ICONS.userCheck}
+          <div>
+            <strong>وسایل ضروری همراه در روز حضوری:</strong>
+            حضور شخص پذیرفته‌شده الزامی است • خودکار آبی، پوشه دکمه‌دار، کپی اضافه شناسنامه و کارت ملی، بطری آب و پاوربانک همراه داشته باشید.
+          </div>
+        </div>
+
+        <ol class="stepper-timeline">${stepsHtml}</ol>
+
+        <!-- نقشه تعاملی پردیس -->
+        <div class="card map-card">
+          <div class="card-header-row">
+            <div>
+              <h3 class="card-title">${toFaDigits(DATA.map.title)}</h3>
+              <p class="card-subtitle">${toFaDigits(DATA.map.subtitle)}</p>
+            </div>
+            <button type="button" class="btn-outline" id="s4-open-full-map">
+              ${ICONS.fullscreen}
+              <span>تمام‌صفحه</span>
+            </button>
+          </div>
+
+          <div class="map-preview-shell" id="s4-map-shell">
+            <div class="map-float-controls" aria-label="کنترل‌های بزرگ‌نمایی نقشه">
+              <button type="button" class="map-ctrl-btn" id="s4-zoom-in" aria-label="بزرگ‌نمایی">+</button>
+              <button type="button" class="map-ctrl-btn" id="s4-zoom-out" aria-label="کوچک‌نمایی">−</button>
+              <button type="button" class="map-ctrl-btn map-ctrl-reset hidden" id="s4-zoom-reset" aria-label="بازنشانی نما" hidden>بازنشانی</button>
+            </div>
+            <div class="map-viewport" id="s4-map-viewport">
+              <div class="map-stage" id="s4-map-stage">
+                <div class="map-canvas">
+                  <img id="s4-map-img" src="${DATA.map.imageUrl}" alt="نقشه هوایی پردیس دانشگاه علوم پزشکی هرمزگان" draggable="false" />
+                  <div class="map-pins-layer" id="s4-map-pins"></div>
+                </div>
               </div>
             </div>
+            <span class="map-tap-hint" id="s4-tap-hint" aria-hidden="true">با دو انگشت زوم کنید یا روی پین‌ها بزنید</span>
+            <div class="map-floating-card hidden" id="s4-map-floating-card" role="region" aria-live="polite" hidden></div>
           </div>
-
-          <ul class="step-meta-list">
-            <li class="step-meta-row">
-              <span class="step-meta-key">مدارک این مرحله:</span>
-              <span>${toFaDigits(step.docs)}</span>
-            </li>
-          </ul>
-
-          ${step.tip ? `<div class="step-tip">نکته: ${toFaDigits(step.tip)}</div>` : ""}
-
-          <div class="step-actions">
-            <button type="button" class="btn-step-done" data-step-id="${step.id}" aria-pressed="${isDone}">
-              ${ICONS.check}
-              <span>${isDone ? "انجام شد" : "انجام دادم"}</span>
-            </button>
-            ${
-              resolvedPinId
-                ? `<button type="button" class="btn-map-jump" data-pin-id="${resolvedPinId}">
-                    ${ICONS.mapPin}
-                    <span>نمایش روی نقشه</span>
-                  </button>`
-                : ""
-            }
-          </div>
-        </article>
-      `;
-
-      li.querySelector(".btn-step-done").addEventListener("click", () => {
-        if (state.doneSteps.has(step.id)) {
-          state.doneSteps.delete(step.id);
-        } else {
-          state.doneSteps.add(step.id);
-        }
-        saveStoredSet(STORAGE_KEYS.steps, state.doneSteps);
-        renderStepper();
-      });
-
-      const jumpBtn = li.querySelector(".btn-map-jump");
-      if (jumpBtn && resolvedPinId) {
-        jumpBtn.addEventListener("click", () => focusMapPin(resolvedPinId, true));
-      }
-
-      listEl.appendChild(li);
-    });
-  }
-
-  // ==========================================================================
-  // ۵. بخش سوم: نقشه دانشگاه (کارت شناور پین + Pinch-to-Zoom امن بدون تله‌اسکرول)
-  // ==========================================================================
-  function updateMapDestinationHighlight() {
-    const activeMajor = getActiveMajor();
-    const destPinId = activeMajor ? activeMajor.mapPinId : null;
-
-    document.querySelectorAll(".map-pin-marker").forEach((el) => {
-      el.classList.toggle("is-destination", Boolean(destPinId && el.dataset.pinId === destPinId));
-    });
-
-    document.querySelectorAll(".legend-item").forEach((el) => {
-      el.classList.toggle("is-destination", Boolean(destPinId && el.id === `legend-${destPinId}`));
-    });
-  }
-
-  function renderFloatingPinCard(pinId) {
-    const pin = DATA.map.pins.find((p) => p.id === pinId);
-    const inlineCard = document.getElementById("map-floating-card");
-    const lightboxCard = document.getElementById("lightbox-floating-card");
-    const cards = [inlineCard, lightboxCard].filter(Boolean);
-
-    if (!pin) {
-      state.activePinId = null;
-      cards.forEach((c) => setHidden(c, true));
-      document.querySelectorAll(".map-pin-marker.is-highlighted, .legend-item.is-highlighted").forEach((el) => {
-        el.classList.remove("is-highlighted");
-      });
-      return;
-    }
-
-    state.activePinId = pin.id;
-    const activeMajor = getActiveMajor();
-    const isUserDestination = Boolean(activeMajor && activeMajor.mapPinId === pin.id);
-
-    // تعیین دانشکده هدف برای دکمه «مشاهده برنامه این دانشکده»
-    let targetFacultyId = pin.facultyId || null;
-    if (activeMajor && pin.relatedFaculties && pin.relatedFaculties.includes(activeMajor.facultyId)) {
-      targetFacultyId = activeMajor.facultyId;
-    }
-
-    document.querySelectorAll(".map-pin-marker").forEach((el) => {
-      el.classList.toggle("is-highlighted", el.dataset.pinId === pin.id);
-    });
-    document.querySelectorAll(".legend-item").forEach((el) => {
-      el.classList.toggle("is-highlighted", el.id === `legend-${pin.id}`);
-    });
-
-    const cardMarkup = `
-      <div class="floating-card-head">
-        <div class="floating-card-title-row">
-          <span class="floating-pin-num">${toFaDigits(pin.number)}</span>
-          <h4 class="floating-card-name">${toFaDigits(pin.name)}</h4>
-          ${isUserDestination ? `<span class="floating-dest-badge">مقصد ثبت‌نام شما</span>` : ""}
         </div>
-        <button type="button" class="floating-card-close" aria-label="بستن اطلاعات ساختمان">${ICONS.close}</button>
       </div>
-      ${pin.address ? `<p class="floating-card-address">${ICONS.mapPin}<span>${toFaDigits(pin.address)}</span></p>` : ""}
-      <p class="floating-card-desc">${toFaDigits(pin.desc)}</p>
-      ${
-        targetFacultyId
-          ? `
-        <div class="floating-card-actions">
-          <button type="button" class="floating-faculty-btn" data-jump-faculty="${targetFacultyId}">
-            ${ICONS.calendar}
-            <span>مشاهده برنامه این دانشکده</span>
-          </button>
-        </div>
-      `
-          : ""
-      }
     `;
 
-    cards.forEach((c) => {
-      c.innerHTML = cardMarkup;
-      setHidden(c, false);
-
-      const closeBtn = c.querySelector(".floating-card-close");
-      if (closeBtn) {
-        closeBtn.addEventListener("click", (e) => {
-          e.stopPropagation();
-          renderFloatingPinCard(null);
-        });
-      }
-
-      const facBtn = c.querySelector("[data-jump-faculty]");
-      if (facBtn) {
-        facBtn.addEventListener("click", (e) => {
-          e.stopPropagation();
-          const facId = facBtn.dataset.jumpFaculty;
-          state.selectedFacultyId = facId;
-          try {
-            localStorage.setItem(STORAGE_KEYS.faculty, facId);
-          } catch {
-            // ignore
-          }
-          renderFacultySelector();
-          renderStepper();
-
-          // اگر لایت‌باکس باز بود ابتدا بسته شود
-          const lb = document.getElementById("map-lightbox");
-          if (lb && !lb.hidden) {
-            lb.hidden = true;
-            document.body.style.overflow = "";
-          }
-
-          const stepperSec = document.getElementById("section-stepper");
-          if (stepperSec) stepperSec.scrollIntoView({ behavior: "smooth", block: "start" });
-        });
-      }
-    });
-  }
-
-  function focusMapPin(pinId, scrollToMap) {
-    renderFloatingPinCard(pinId);
-    if (scrollToMap) {
-      const mapPreview = document.getElementById("map-preview-shell");
-      if (mapPreview) {
-        mapPreview.scrollIntoView({ behavior: "smooth", block: "center" });
-      }
-    }
-  }
-
-  function renderPinsLayer(containerEl) {
-    if (!containerEl) return;
-    containerEl.innerHTML = "";
-
-    DATA.map.pins.forEach((pin) => {
-      if (typeof pin.x !== "number" || typeof pin.y !== "number") return;
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "map-pin-marker";
-      btn.dataset.pinId = pin.id;
-      btn.style.left = `${pin.x}%`;
-      btn.style.top = `${pin.y}%`;
-      btn.setAttribute("aria-label", `${toFaDigits(pin.number)} — ${pin.name}`);
-      btn.innerHTML = `
-        <span class="map-pin-dot">${toFaDigits(pin.number)}</span>
-        <span class="map-pin-label">${toFaDigits(pin.name)}</span>
-      `;
-
-      btn.addEventListener("click", (e) => {
-        e.stopPropagation();
-        renderFloatingPinCard(pin.id);
-      });
-
-      containerEl.appendChild(btn);
-    });
-  }
-
-  function renderMapAndLegend() {
-    document.getElementById("map-title").textContent = DATA.map.title;
-    document.getElementById("map-subtitle").textContent = toFaDigits(DATA.map.subtitle);
-
-    const extNote = document.getElementById("campus-external-note");
-    if (DATA.map.externalNoteText) {
-      setHidden(extNote, false);
-      extNote.innerHTML = `
-        ${ICONS.info}
-        <div>
-          <strong>${DATA.map.externalNoteTitle}:</strong>
-          <span>${toFaDigits(DATA.map.externalNoteText)}</span>
-        </div>
-      `;
-    }
-
-    const previewImg = document.getElementById("campus-map-img");
-    const lightboxImg = document.getElementById("lightbox-map-img");
-
-    function applySrc(img) {
-      img.src = DATA.map.imageUrl;
-      img.onerror = () => {
-        if (img.src.indexOf(DATA.map.fallbackUrl) === -1) {
-          img.src = DATA.map.fallbackUrl;
-        }
-      };
-    }
-
-    applySrc(previewImg);
-    applySrc(lightboxImg);
-
-    renderPinsLayer(document.getElementById("map-pins-layer"));
-    renderPinsLayer(document.getElementById("lightbox-pins-layer"));
-
-    const legendList = document.getElementById("map-legend-list");
-    legendList.innerHTML = "";
-
-    DATA.map.pins.forEach((pin) => {
-      const li = document.createElement("li");
-      li.className = "legend-item";
-      li.id = `legend-${pin.id}`;
-      li.tabIndex = 0;
-      li.setAttribute("role", "button");
-      li.innerHTML = `
-        <span class="legend-pin">${toFaDigits(pin.number)}</span>
-        <div>
-          <div class="legend-name">${toFaDigits(pin.name)}</div>
-          <div class="legend-desc">${toFaDigits(pin.desc)}</div>
-        </div>
-      `;
-
-      const selectPin = () => focusMapPin(pin.id, true);
-      li.addEventListener("click", selectPin);
-      li.addEventListener("keydown", (e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          selectPin();
-        }
-      });
-
-      legendList.appendChild(li);
-    });
-
-    updateMapDestinationHighlight();
-  }
-
-  // کنترلر Pinch-to-Zoom و Pan امن (در scale === 1 اسکرول عمودی صفحه هرگز گیر نمی‌کند)
-  function createMapController(viewportEl, stageEl, options) {
-    const isFullscreen = Boolean(options && options.isFullscreen);
-    const onZoomChange = options && options.onZoomChange;
-    let scale = 1;
-    let tx = 0;
-    let ty = 0;
-
-    function clampTranslation() {
-      if (scale <= 1) {
-        tx = 0;
-        ty = 0;
-        return;
-      }
-      const vw = viewportEl.clientWidth || 1;
-      const vh = viewportEl.clientHeight || 1;
-      const maxX = Math.max(0, (vw * (scale - 1)) / 2 + 24);
-      const maxY = Math.max(0, (vh * (scale - 1)) / 2 + 24);
-      tx = Math.max(-maxX, Math.min(maxX, tx));
-      ty = Math.max(-maxY, Math.min(maxY, ty));
-    }
-
-    function applyTransform() {
-      clampTranslation();
-      stageEl.style.transform = `translate3d(${tx}px, ${ty}px, 0) scale(${scale})`;
-      // مقیاس معکوس برای جلوگیری از غول‌پیکر شدن پین‌ها هنگام زوم
-      stageEl.style.setProperty("--map-pin-scale", String(+(1 / Math.sqrt(scale)).toFixed(3)));
-      viewportEl.classList.toggle("is-zoomed", scale > 1 || isFullscreen);
-      if (onZoomChange) onZoomChange(scale);
-    }
-
-    function setScale(nextScale) {
-      scale = Math.max(1, Math.min(3, +nextScale.toFixed(2)));
-      if (scale <= 1.02) {
-        scale = 1;
-        tx = 0;
-        ty = 0;
-      }
-      applyTransform();
-    }
-
-    function reset() {
-      scale = 1;
-      tx = 0;
-      ty = 0;
-      applyTransform();
-    }
-
-    // Pinch-to-Zoom دو انگشتی + Drag تک‌انگشتی فقط وقتی scale > 1 یا Fullscreen است
-    let pinchStartDist = 0;
-    let pinchStartScale = 1;
-    let panStartX = 0;
-    let panStartY = 0;
-    let panOriginTx = 0;
-    let panOriginTy = 0;
-    let isTouchPanning = false;
-    let lastTapTime = 0;
-
-    function getTouchDist(t1, t2) {
-      return Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
-    }
-
-    viewportEl.addEventListener(
-      "touchstart",
-      (e) => {
-        if (e.target.closest(".map-pin-marker") || e.target.closest(".map-floating-card")) return;
-
-        if (e.touches.length === 2) {
-          e.preventDefault();
-          isTouchPanning = false;
-          pinchStartDist = getTouchDist(e.touches[0], e.touches[1]);
-          pinchStartScale = scale;
-        } else if (e.touches.length === 1) {
-          const now = Date.now();
-          if (now - lastTapTime < 280) {
-            e.preventDefault();
-            setScale(scale > 1 ? 1 : 2);
-            lastTapTime = 0;
-            return;
-          }
-          lastTapTime = now;
-
-          // فقط وقتی زوم شده یا تمام‌صفحه است، Drag تک‌انگشتی فعال شود (جلوگیری از تله اسکرول)
-          if (scale > 1 || isFullscreen) {
-            isTouchPanning = true;
-            panStartX = e.touches[0].clientX;
-            panStartY = e.touches[0].clientY;
-            panOriginTx = tx;
-            panOriginTy = ty;
-          }
-        }
-      },
-      { passive: false }
-    );
-
-    viewportEl.addEventListener(
-      "touchmove",
-      (e) => {
-        if (e.touches.length === 2 && pinchStartDist > 0) {
-          e.preventDefault();
-          const dist = getTouchDist(e.touches[0], e.touches[1]);
-          setScale(pinchStartScale * (dist / pinchStartDist));
-        } else if (e.touches.length === 1 && isTouchPanning && (scale > 1 || isFullscreen)) {
-          e.preventDefault();
-          tx = panOriginTx + (e.touches[0].clientX - panStartX);
-          ty = panOriginTy + (e.touches[0].clientY - panStartY);
-          applyTransform();
-        }
-      },
-      { passive: false }
-    );
-
-    viewportEl.addEventListener("touchend", (e) => {
-      if (e.touches.length < 2) pinchStartDist = 0;
-      if (e.touches.length === 0) isTouchPanning = false;
-    });
-
-    // کشیدن با ماوس روی دسکتاپ وقتی زوم شده یا تمام‌صفحه است
-    let isMousePanning = false;
-    viewportEl.addEventListener("mousedown", (e) => {
-      if (e.target.closest(".map-pin-marker") || e.target.closest(".map-floating-card")) return;
-      if (scale <= 1 && !isFullscreen) return;
-      isMousePanning = true;
-      viewportEl.classList.add("is-dragging");
-      panStartX = e.clientX;
-      panStartY = e.clientY;
-      panOriginTx = tx;
-      panOriginTy = ty;
-    });
-
-    window.addEventListener("mousemove", (e) => {
-      if (!isMousePanning) return;
-      e.preventDefault();
-      tx = panOriginTx + (e.clientX - panStartX);
-      ty = panOriginTy + (e.clientY - panStartY);
-      applyTransform();
-    });
-
-    window.addEventListener("mouseup", () => {
-      if (!isMousePanning) return;
-      isMousePanning = false;
-      viewportEl.classList.remove("is-dragging");
-    });
-
-    applyTransform();
-
-    return {
-      zoomIn: () => setScale(scale + 0.4),
-      zoomOut: () => setScale(scale - 0.4),
-      reset,
-      getScale: () => scale
+    // Fallback تصویر نقشه
+    const img = panel.querySelector("#s4-map-img");
+    img.onerror = () => {
+      if (img.src.indexOf(DATA.map.fallbackUrl) === -1) img.src = DATA.map.fallbackUrl;
     };
-  }
 
-  function initInteractiveMaps() {
-    const inlineViewport = document.getElementById("inline-map-viewport");
-    const inlineStage = document.getElementById("inline-map-stage");
-    const inlineResetBtn = document.getElementById("inline-zoom-reset-btn");
-    const tapHint = document.getElementById("map-tap-hint");
+    renderPinsLayer(panel.querySelector("#s4-map-pins"));
+    updateMapDestinationHighlight();
 
-    const inlineCtrl = createMapController(inlineViewport, inlineStage, {
+    const resetBtn = panel.querySelector("#s4-zoom-reset");
+    const tapHint = panel.querySelector("#s4-tap-hint");
+    inlineMapCtrl = createMapController(panel.querySelector("#s4-map-viewport"), panel.querySelector("#s4-map-stage"), {
       isFullscreen: false,
       onZoomChange: (s) => {
-        setHidden(inlineResetBtn, s <= 1);
+        setHidden(resetBtn, s <= 1);
         setHidden(tapHint, s > 1);
       }
     });
 
-    document.getElementById("inline-zoom-in-btn").addEventListener("click", () => inlineCtrl.zoomIn());
-    document.getElementById("inline-zoom-out-btn").addEventListener("click", () => inlineCtrl.zoomOut());
-    document.getElementById("inline-zoom-reset-btn").addEventListener("click", () => inlineCtrl.reset());
+    panel.querySelector("#s4-zoom-in").addEventListener("click", () => inlineMapCtrl.zoomIn());
+    panel.querySelector("#s4-zoom-out").addEventListener("click", () => inlineMapCtrl.zoomOut());
+    resetBtn.addEventListener("click", () => inlineMapCtrl.reset());
+    panel.querySelector("#s4-open-full-map").addEventListener("click", () => openDrawer("map"));
 
-    // لایت‌باکس تمام‌صفحه
-    const lightbox = document.getElementById("map-lightbox");
-    const openBtn = document.getElementById("open-lightbox-btn");
-    const inlineFsBtn = document.getElementById("inline-fullscreen-btn");
-    const closeBtn = document.getElementById("lightbox-close-btn");
-    const zoomText = document.getElementById("zoom-level-text");
-    const lbViewport = document.getElementById("lightbox-viewport");
-    const lbStage = document.getElementById("lightbox-stage");
-
-    const lbCtrl = createMapController(lbViewport, lbStage, {
-      isFullscreen: true,
-      onZoomChange: (s) => {
-        if (zoomText) zoomText.textContent = `${toFaDigits(Math.round(s * 100))}٪`;
-      }
+    panel.querySelectorAll("[data-s4-step]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const id = btn.dataset.s4Step;
+        if (state.doneSteps.has(id)) state.doneSteps.delete(id);
+        else state.doneSteps.add(id);
+        saveStoredSet(STORAGE_KEYS.steps, state.doneSteps);
+        renderStep4();
+      });
     });
 
-    function openLightbox() {
-      lbCtrl.reset();
-      lightbox.hidden = false;
-      document.body.style.overflow = "hidden";
-      closeBtn.focus();
-    }
-
-    function closeLightbox() {
-      lightbox.hidden = true;
-      document.body.style.overflow = "";
-      openBtn.focus();
-    }
-
-    openBtn.addEventListener("click", openLightbox);
-    if (inlineFsBtn) inlineFsBtn.addEventListener("click", openLightbox);
-    closeBtn.addEventListener("click", closeLightbox);
-
-    document.getElementById("zoom-in-btn").addEventListener("click", () => lbCtrl.zoomIn());
-    document.getElementById("zoom-out-btn").addEventListener("click", () => lbCtrl.zoomOut());
-    document.getElementById("zoom-reset-btn").addEventListener("click", () => lbCtrl.reset());
-
-    document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape" && !lightbox.hidden) {
-        closeLightbox();
-      }
+    panel.querySelectorAll("[data-s4-pin]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const pinId = btn.dataset.s4Pin;
+        renderFloatingPinCard(pinId);
+        const shell = panel.querySelector("#s4-map-shell");
+        if (shell) shell.scrollIntoView({ behavior: "smooth", block: "center" });
+      });
     });
   }
 
-  function renderExtraAddresses() {
-    const container = document.getElementById("campus-extra-addresses");
-    if (!container || !DATA.extraAddresses || !DATA.extraAddresses.length) return;
+  // ==========================================================================
+  // قدم ۵: «بعد از ثبت‌نام و پشتیبانی»
+  // ==========================================================================
+  function renderStep5() {
+    const panel = document.getElementById("panel-step-5");
+    if (!panel) return;
 
-    const cardsHtml = DATA.extraAddresses
+    const statusCardsHtml = DATA.statusBoard.items
       .map((item) => {
-        const metaChips = [];
-        if (item.postalCode) {
-          metaChips.push(`<span class="extra-meta-pill">کدپستی: <strong dir="ltr">${toFaDigits(item.postalCode)}</strong></span>`);
-        }
-        if (item.phone) {
-          metaChips.push(
-            `<a href="${item.phone.href}" class="phone-link-chip" dir="ltr">${ICONS.phone}<span>${item.phone.display}</span></a>`
-          );
-        }
-        if (item.email) {
-          metaChips.push(
-            `<a href="mailto:${item.email}" class="phone-link-chip" dir="ltr">${ICONS.mail}<span>${item.email}</span></a>`
-          );
-        }
+        const stateClass =
+          item.state === "confirmed"
+            ? "status-confirmed"
+            : item.state === "pending"
+            ? "status-pending"
+            : item.state === "info"
+            ? "status-info"
+            : "status-unknown";
+
+        const linksHtml = (item.links || [])
+          .map(
+            (lnk) =>
+              `<a href="${lnk.url}" target="_blank" rel="noopener noreferrer" class="status-link-btn">${ICONS.external}<span>${toFaDigits(lnk.label)}</span></a>`
+          )
+          .join("");
+
+        const phonesHtml = (item.phones || [])
+          .map(
+            (p) => `
+            <a href="${p.href}" class="status-phone-row">
+              <span class="status-phone-label">${ICONS.phone}<span>${toFaDigits(p.label)}</span></span>
+              <span class="status-phone-num" dir="ltr">${p.display}</span>
+            </a>
+          `
+          )
+          .join("");
 
         return `
-          <article class="card extra-address-card">
-            <h4 class="extra-address-title">${ICONS.mapPin}<span>${toFaDigits(item.title)}</span></h4>
-            <p class="extra-address-text">${toFaDigits(item.address)}</p>
-            ${metaChips.length ? `<div class="extra-address-meta">${metaChips.join("")}</div>` : ""}
+          <article class="card status-card">
+            <div class="status-card-top">
+              <h3 class="status-title">${toFaDigits(item.title)}</h3>
+              <span class="status-badge ${stateClass}">${toFaDigits(item.badgeText)}</span>
+            </div>
+            <p class="status-detail">${toFaDigits(item.detail)}</p>
+            ${linksHtml ? `<div class="status-links-wrap">${linksHtml}</div>` : ""}
+            ${phonesHtml ? `<div class="status-phones-list">${phonesHtml}</div>` : ""}
           </article>
         `;
       })
       .join("");
 
-    container.innerHTML = `
-      <div class="subsection-header">
-        <h3 class="subsection-title">نشانی‌های تکمیلی و اطلاعات تماس</h3>
-        <p class="subsection-desc">نشانی مراکز اداری و حقوقی خارج از پردیس برای پیگیری امور ثبت‌نام و ایثارگران.</p>
-      </div>
-      <div class="extra-addresses-grid">${cardsHtml}</div>
-    `;
-  }
-
-  function renderAssociations() {
-    const gridEl = document.getElementById("associations-grid");
-    gridEl.innerHTML = "";
-
-    DATA.associations.forEach((assoc) => {
-      const isPlaceholder = assoc.url.startsWith("#");
-      const card = document.createElement("article");
-      card.className = `card assoc-card${assoc.featured ? " is-featured" : ""}${isPlaceholder ? " is-placeholder" : ""}`;
-      card.innerHTML = `
-        <div>
-          ${
-            assoc.featuredTag
-              ? `<div class="assoc-featured-ribbon">${ICONS.sparkle}<span>${toFaDigits(assoc.featuredTag)}</span></div>`
-              : ""
-          }
-          <div class="assoc-top">
-            <h4 class="assoc-name">${toFaDigits(assoc.name)}</h4>
-            ${assoc.platform ? `<span class="assoc-cat-tag">${assoc.platform}</span>` : ""}
+    const assocHtml = DATA.associations
+      .map(
+        (assoc) => `
+        <article class="card assoc-card${assoc.featured ? " is-featured" : ""}">
+          <div>
+            ${assoc.featuredTag ? `<div class="assoc-featured-ribbon">${ICONS.sparkle}<span>${toFaDigits(assoc.featuredTag)}</span></div>` : ""}
+            <div class="assoc-top">
+              <h4 class="assoc-name">${toFaDigits(assoc.name)}</h4>
+              ${assoc.platform ? `<span class="assoc-cat-tag">${assoc.platform}</span>` : ""}
+            </div>
+            <p class="assoc-desc">${toFaDigits(assoc.desc)}</p>
           </div>
-          <p class="assoc-desc">${toFaDigits(assoc.desc)}</p>
+          <div class="assoc-actions">
+            <button type="button" class="assoc-btn assoc-btn-copy" data-copy-handle="${assoc.handle}">${ICONS.copy}<span>کپی آیدی</span></button>
+            <a href="${assoc.url}" target="_blank" rel="noopener noreferrer" class="assoc-btn assoc-btn-link">${ICONS.external}<span>ورود به کانال</span></a>
+          </div>
+        </article>
+      `
+      )
+      .join("");
+
+    panel.innerHTML = `
+      <div class="step-page-stack">
+        <div class="step-surface-head">
+          <span class="step-kicker-pill">قدم ۵ از ۵</span>
+          <h2 class="step-surface-title">بعد از ثبت‌نام و پشتیبانی</h2>
+          <p class="step-surface-desc">وضعیت کلاس‌ها، آزمون زبان، امور رفاهی و کانال‌های رسمی پیگیری سوالات.</p>
         </div>
-        <div class="assoc-actions">
-          <button type="button" class="assoc-btn assoc-btn-copy" data-handle="${assoc.handle}">
-            ${ICONS.copy}
-            <span>کپی آیدی</span>
+
+        <div class="status-grid">${statusCardsHtml}</div>
+
+        <div class="subsection-header">
+          <h3 class="subsection-title">کانال‌های رسمی و پشتیبانی نوورودی‌ها</h3>
+        </div>
+        <div class="associations-grid">${assocHtml}</div>
+
+        <!-- دکمه‌های اقدام نهایی -->
+        <div class="card step5-final-actions">
+          <button type="button" class="mypath-btn-primary" id="s5-share-btn">
+            ${ICONS.share}
+            <span>اشتراک‌گذاری این راهنما با هم‌کلاسی‌ها</span>
           </button>
-          <a href="${assoc.url}" ${isPlaceholder ? "" : 'target="_blank" rel="noopener noreferrer"'} class="assoc-btn assoc-btn-link">
-            ${ICONS.external}
-            <span>ورود به کانال</span>
+          <button type="button" class="mypath-btn-secondary" id="s5-print-btn">
+            ${ICONS.print}
+            <span>چاپ / PDF چک‌لیست من</span>
+          </button>
+          <a href="${DATA.meta.footerChannelUrl}" target="_blank" rel="noopener noreferrer" class="mypath-btn-secondary">
+            ${ICONS.send}
+            <span>گزارش تغییر یا خطا به شورای صنفی</span>
           </a>
         </div>
-      `;
+      </div>
+    `;
 
-      card.querySelector(".assoc-btn-copy").addEventListener("click", () => {
-        if (isPlaceholder) {
-          showToast("این بخش فعلاً موقت است و به‌زودی تکمیل می‌شود.");
-          return;
-        }
-        copyToClipboard(assoc.handle, `آیدی ${assoc.handle} کپی شد.`);
+    panel.querySelectorAll("[data-copy-handle]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        copyToClipboard(btn.dataset.copyHandle, `آیدی ${btn.dataset.copyHandle} کپی شد.`);
       });
-
-      if (isPlaceholder) {
-        card.querySelector(".assoc-btn-link").addEventListener("click", (e) => {
-          e.preventDefault();
-          showToast("لینک این بخش هنوز اضافه نشده است.");
-        });
-      }
-
-      gridEl.appendChild(card);
     });
+
+    panel.querySelector("#s5-share-btn").addEventListener("click", triggerShare);
+    panel.querySelector("#s5-print-btn").addEventListener("click", triggerPrintChecklist);
   }
 
   // ==========================================================================
-  // ۶. بخش چهارم: تابلوی وضعیت و سوالات متداول
+  // کشوها و مودال‌های نوار بالا (نقشه، سوالات متداول، ضروری‌ها)
   // ==========================================================================
-  function renderStatusBoard() {
-    document.getElementById("status-last-updated").textContent =
-      `آخرین به‌روزرسانی: ${toFaDigits(DATA.statusBoard.lastUpdated)}`;
+  let modalMapCtrl = null;
 
-    const gridEl = document.getElementById("status-grid");
-    gridEl.innerHTML = "";
+  function openDrawer(name) {
+    closeAllDrawers(false);
+    const el = document.getElementById(`drawer-${name}`);
+    if (!el) return;
+    state.savedScrollY = window.scrollY || 0;
+    state.activeDrawer = name;
+    setHidden(el, false);
+    document.body.style.overflow = "hidden";
 
-    DATA.statusBoard.items.forEach((item) => {
-      const stateClass =
-        item.state === "confirmed"
-          ? "status-confirmed"
-          : item.state === "pending"
-          ? "status-pending"
-          : item.state === "info"
-          ? "status-info"
-          : "status-unknown";
+    if (name === "map" && modalMapCtrl) {
+      modalMapCtrl.reset();
+      updateMapDestinationHighlight();
+      const major = getActiveMajor();
+      if (major && !state.activePinId) {
+        renderFloatingPinCard(major.mapPinId);
+      }
+    }
 
-      const linksHtml = (item.links || [])
-        .map(
-          (lnk) =>
-            `<a href="${lnk.url}" target="_blank" rel="noopener noreferrer" class="status-link-btn">${ICONS.external}<span>${toFaDigits(lnk.label)}</span></a>`
-        )
-        .join("");
+    const closeBtn = el.querySelector("[data-close-drawer]");
+    if (closeBtn) closeBtn.focus();
+  }
 
-      const phonesHtml = (item.phones || [])
-        .map(
-          (p) => `
-          <a href="${p.href}" class="status-phone-row">
-            <span class="status-phone-label">${ICONS.phone}<span>${toFaDigits(p.label)}</span></span>
-            <span class="status-phone-num" dir="ltr">${p.display}</span>
-          </a>
-        `
-        )
-        .join("");
+  function closeAllDrawers(restoreScroll = true) {
+    ["map", "faq", "essentials"].forEach((name) => {
+      setHidden(document.getElementById(`drawer-${name}`), true);
+    });
+    state.activeDrawer = null;
+    document.body.style.overflow = "";
+    if (restoreScroll && typeof state.savedScrollY === "number") {
+      window.scrollTo({ top: state.savedScrollY, behavior: "instant" });
+    }
+  }
 
-      const card = document.createElement("article");
-      card.className = "card status-card";
-      card.innerHTML = `
-        <div class="status-card-top">
-          <h4 class="status-title">${toFaDigits(item.title)}</h4>
-          <span class="status-badge ${stateClass}">${toFaDigits(item.badgeText)}</span>
+  function renderEssentialsDrawer() {
+    const body = document.getElementById("drawer-essentials-body");
+    if (!body) return;
+
+    const eduAddr = DATA.extraAddresses && DATA.extraAddresses[0];
+    const welfareItem = DATA.statusBoard.items.find((i) => i.phones && i.phones.length);
+
+    const phonesList = [
+      ...(welfareItem ? welfareItem.phones : []),
+      ...(eduAddr && eduAddr.phone ? [{ label: "معاونت آموزشی دانشگاه", display: eduAddr.phone.display, href: eduAddr.phone.href }] : [])
+    ];
+
+    body.innerHTML = `
+      <div class="essentials-stack">
+        <div class="essentials-section">
+          <h4 class="essentials-heading">سامانه‌ها و چاپ سریع</h4>
+          <div class="essentials-btn-stack">
+            <a href="${window.OFFICIAL_LINKS.HAMAVA_URL}" target="_blank" rel="noopener noreferrer" class="official-link-btn">
+              ${ICONS.external}
+              <span>ورود به سامانه جامع آموزشی هم‌آوا</span>
+            </a>
+            <a href="${window.OFFICIAL_LINKS.EDUV_OFFICIAL}" target="_blank" rel="noopener noreferrer" class="official-link-btn is-secondary">
+              ${ICONS.external}
+              <span>اطلاعیه کامل و دانلود فرم‌ها (معاونت آموزشی)</span>
+            </a>
+            <button type="button" class="mypath-btn-secondary" id="drawer-print-btn">
+              ${ICONS.print}
+              <span>چاپ / PDF چک‌لیست اختصاصی من</span>
+            </button>
+          </div>
         </div>
-        <p class="status-detail">${toFaDigits(item.detail)}</p>
-        ${linksHtml ? `<div class="status-links-wrap">${linksHtml}</div>` : ""}
-        ${phonesHtml ? `<div class="status-phones-list">${phonesHtml}</div>` : ""}
-      `;
-      gridEl.appendChild(card);
+
+        <div class="essentials-section">
+          <h4 class="essentials-heading">شماره‌های تماس مستقیم و امور رفاهی</h4>
+          <div class="status-phones-list">
+            ${phonesList
+              .map(
+                (p) => `
+                <a href="${p.href}" class="status-phone-row">
+                  <span class="status-phone-label">${ICONS.phone}<span>${toFaDigits(p.label)}</span></span>
+                  <span class="status-phone-num" dir="ltr">${p.display}</span>
+                </a>
+              `
+              )
+              .join("")}
+          </div>
+          <a href="${window.OFFICIAL_LINKS.MEFDA}" target="_blank" rel="noopener noreferrer" class="status-link-btn essentials-mefda-btn">
+            ${ICONS.external}
+            <span>پرتال امور رفاهی و دانشجویی (mefda.ir)</span>
+          </a>
+        </div>
+
+        <div class="essentials-section">
+          <h4 class="essentials-heading">نشانی‌های تکمیلی</h4>
+          <div class="essentials-addr-list">
+            ${(DATA.extraAddresses || [])
+              .map(
+                (a) => `
+                <div class="essentials-addr-item">
+                  <strong>${toFaDigits(a.title)}:</strong>
+                  <span>${toFaDigits(a.address)}</span>
+                </div>
+              `
+              )
+              .join("")}
+          </div>
+        </div>
+
+        <div class="essentials-section">
+          <h4 class="essentials-heading">پشتیبانی شورای صنفی</h4>
+          <div class="essentials-btn-stack">
+            <a href="${DATA.meta.footerChannelUrl}" target="_blank" rel="noopener noreferrer" class="footer-channel-btn">
+              ${ICONS.send}
+              <span>کانال تلگرام شورای صنفی دانشجویان</span>
+            </a>
+            <a href="${DATA.meta.footerChannelUrl}" target="_blank" rel="noopener noreferrer" class="mypath-btn-secondary">
+              ${ICONS.info}
+              <span>گزارش تغییر یا سوال</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    `;
+
+    body.querySelector("#drawer-print-btn").addEventListener("click", () => {
+      closeAllDrawers(false);
+      triggerPrintChecklist();
     });
   }
 
@@ -1850,7 +1515,6 @@
       const wrapper = document.createElement("article");
       wrapper.className = "card faq-item";
       const panelId = `faq-panel-${index}`;
-
       wrapper.innerHTML = `
         <button type="button" class="faq-trigger" aria-expanded="false" aria-controls="${panelId}">
           <span>${toFaDigits(item.q)}</span>
@@ -1862,58 +1526,433 @@
           </div>
         </div>
       `;
-
       const btn = wrapper.querySelector(".faq-trigger");
       btn.addEventListener("click", () => {
         const isOpen = wrapper.classList.toggle("is-open");
         btn.setAttribute("aria-expanded", String(isOpen));
       });
-
       listEl.appendChild(wrapper);
     });
   }
 
-  function initFaqSearch() {
-    const input = document.getElementById("faq-search-input");
-    const clearBtn = document.getElementById("faq-search-clear");
+  // ==========================================================================
+  // نقشه تعاملی مشترک (مودال نقشه + نقشه قدم ۴ + Pinch-to-Zoom امن)
+  // ==========================================================================
+  function renderPinsLayer(containerEl) {
+    if (!containerEl) return;
+    containerEl.innerHTML = "";
 
-    input.addEventListener("input", () => {
-      state.faqQuery = input.value;
-      setHidden(clearBtn, !input.value);
-      renderFaqs();
+    DATA.map.pins.forEach((pin) => {
+      if (typeof pin.x !== "number" || typeof pin.y !== "number") return;
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "map-pin-marker";
+      btn.dataset.pinId = pin.id;
+      btn.style.left = `${pin.x}%`;
+      btn.style.top = `${pin.y}%`;
+      btn.setAttribute("aria-label", `${toFaDigits(pin.number)} — ${pin.name}`);
+      btn.innerHTML = `
+        <span class="map-pin-dot">${toFaDigits(pin.number)}</span>
+        <span class="map-pin-label">${toFaDigits(pin.name)}</span>
+      `;
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        renderFloatingPinCard(pin.id);
+      });
+      containerEl.appendChild(btn);
+    });
+  }
+
+  function updateMapDestinationHighlight() {
+    const activeMajor = getActiveMajor();
+    const destPinId = activeMajor ? activeMajor.mapPinId : null;
+
+    document.querySelectorAll(".map-pin-marker").forEach((el) => {
+      el.classList.toggle("is-destination", Boolean(destPinId && el.dataset.pinId === destPinId));
+    });
+    document.querySelectorAll(".legend-item").forEach((el) => {
+      el.classList.toggle("is-destination", Boolean(destPinId && el.dataset.legendPin === destPinId));
+    });
+  }
+
+  function renderFloatingPinCard(pinId) {
+    const pin = DATA.map.pins.find((p) => p.id === pinId);
+    const cards = [
+      document.getElementById("modal-map-floating-card"),
+      document.getElementById("s4-map-floating-card")
+    ].filter(Boolean);
+
+    if (!pin) {
+      state.activePinId = null;
+      cards.forEach((c) => setHidden(c, true));
+      document.querySelectorAll(".map-pin-marker.is-highlighted, .legend-item.is-highlighted").forEach((el) => {
+        el.classList.remove("is-highlighted");
+      });
+      return;
+    }
+
+    state.activePinId = pin.id;
+    const activeMajor = getActiveMajor();
+    const isDest = Boolean(activeMajor && activeMajor.mapPinId === pin.id);
+
+    document.querySelectorAll(".map-pin-marker").forEach((el) => {
+      el.classList.toggle("is-highlighted", el.dataset.pinId === pin.id);
+    });
+    document.querySelectorAll(".legend-item").forEach((el) => {
+      el.classList.toggle("is-highlighted", el.dataset.legendPin === pin.id);
     });
 
-    clearBtn.addEventListener("click", () => {
-      input.value = "";
-      state.faqQuery = "";
-      setHidden(clearBtn, true);
-      renderFaqs();
-      input.focus();
+    const markup = `
+      <div class="floating-card-head">
+        <div class="floating-card-title-row">
+          <span class="floating-pin-num">${toFaDigits(pin.number)}</span>
+          <h4 class="floating-card-name">${toFaDigits(pin.name)}</h4>
+          ${isDest ? `<span class="floating-dest-badge">مقصد ثبت‌نام شما</span>` : ""}
+        </div>
+        <button type="button" class="floating-card-close" aria-label="بستن">${ICONS.close}</button>
+      </div>
+      ${pin.address ? `<p class="floating-card-address">${ICONS.mapPin}<span>${toFaDigits(pin.address)}</span></p>` : ""}
+      <p class="floating-card-desc">${toFaDigits(pin.desc)}</p>
+    `;
+
+    cards.forEach((c) => {
+      c.innerHTML = markup;
+      setHidden(c, false);
+      c.querySelector(".floating-card-close").addEventListener("click", (e) => {
+        e.stopPropagation();
+        renderFloatingPinCard(null);
+      });
     });
+  }
+
+  function createMapController(viewportEl, stageEl, options) {
+    const isFullscreen = Boolean(options && options.isFullscreen);
+    const onZoomChange = options && options.onZoomChange;
+    let scale = 1;
+    let tx = 0;
+    let ty = 0;
+
+    function clamp() {
+      if (scale <= 1) {
+        tx = 0;
+        ty = 0;
+        return;
+      }
+      const vw = viewportEl.clientWidth || 1;
+      const vh = viewportEl.clientHeight || 1;
+      const maxX = Math.max(0, (vw * (scale - 1)) / 2 + 24);
+      const maxY = Math.max(0, (vh * (scale - 1)) / 2 + 24);
+      tx = Math.max(-maxX, Math.min(maxX, tx));
+      ty = Math.max(-maxY, Math.min(maxY, ty));
+    }
+
+    function apply() {
+      clamp();
+      stageEl.style.transform = `translate3d(${tx}px, ${ty}px, 0) scale(${scale})`;
+      stageEl.style.setProperty("--map-pin-scale", String(+(1 / Math.sqrt(scale)).toFixed(3)));
+      viewportEl.classList.toggle("is-zoomed", scale > 1 || isFullscreen);
+      if (onZoomChange) onZoomChange(scale);
+    }
+
+    function setScale(next) {
+      scale = Math.max(1, Math.min(3, +next.toFixed(2)));
+      if (scale <= 1.02) {
+        scale = 1;
+        tx = 0;
+        ty = 0;
+      }
+      apply();
+    }
+
+    function reset() {
+      scale = 1;
+      tx = 0;
+      ty = 0;
+      apply();
+    }
+
+    let pinchStartDist = 0;
+    let pinchStartScale = 1;
+    let panStartX = 0;
+    let panStartY = 0;
+    let panOriginTx = 0;
+    let panOriginTy = 0;
+    let isTouchPanning = false;
+    let lastTapTime = 0;
+
+    const getDist = (a, b) => Math.hypot(b.clientX - a.clientX, b.clientY - a.clientY);
+
+    viewportEl.addEventListener(
+      "touchstart",
+      (e) => {
+        if (e.target.closest(".map-pin-marker") || e.target.closest(".map-floating-card")) return;
+        if (e.touches.length === 2) {
+          e.preventDefault();
+          isTouchPanning = false;
+          pinchStartDist = getDist(e.touches[0], e.touches[1]);
+          pinchStartScale = scale;
+        } else if (e.touches.length === 1) {
+          const now = Date.now();
+          if (now - lastTapTime < 280) {
+            e.preventDefault();
+            setScale(scale > 1 ? 1 : 2);
+            lastTapTime = 0;
+            return;
+          }
+          lastTapTime = now;
+          if (scale > 1 || isFullscreen) {
+            isTouchPanning = true;
+            panStartX = e.touches[0].clientX;
+            panStartY = e.touches[0].clientY;
+            panOriginTx = tx;
+            panOriginTy = ty;
+          }
+        }
+      },
+      { passive: false }
+    );
+
+    viewportEl.addEventListener(
+      "touchmove",
+      (e) => {
+        if (e.touches.length === 2 && pinchStartDist > 0) {
+          e.preventDefault();
+          setScale(pinchStartScale * (getDist(e.touches[0], e.touches[1]) / pinchStartDist));
+        } else if (e.touches.length === 1 && isTouchPanning && (scale > 1 || isFullscreen)) {
+          e.preventDefault();
+          tx = panOriginTx + (e.touches[0].clientX - panStartX);
+          ty = panOriginTy + (e.touches[0].clientY - panStartY);
+          apply();
+        }
+      },
+      { passive: false }
+    );
+
+    viewportEl.addEventListener("touchend", (e) => {
+      if (e.touches.length < 2) pinchStartDist = 0;
+      if (e.touches.length === 0) isTouchPanning = false;
+    });
+
+    let isMousePanning = false;
+    viewportEl.addEventListener("mousedown", (e) => {
+      if (e.target.closest(".map-pin-marker") || e.target.closest(".map-floating-card")) return;
+      if (scale <= 1 && !isFullscreen) return;
+      isMousePanning = true;
+      viewportEl.classList.add("is-dragging");
+      panStartX = e.clientX;
+      panStartY = e.clientY;
+      panOriginTx = tx;
+      panOriginTy = ty;
+    });
+
+    window.addEventListener("mousemove", (e) => {
+      if (!isMousePanning) return;
+      e.preventDefault();
+      tx = panOriginTx + (e.clientX - panStartX);
+      ty = panOriginTy + (e.clientY - panStartY);
+      apply();
+    });
+
+    window.addEventListener("mouseup", () => {
+      if (!isMousePanning) return;
+      isMousePanning = false;
+      viewportEl.classList.remove("is-dragging");
+    });
+
+    apply();
+
+    return {
+      zoomIn: () => setScale(scale + 0.4),
+      zoomOut: () => setScale(scale - 0.4),
+      reset
+    };
+  }
+
+  function initModalMap() {
+    const img = document.getElementById("modal-map-img");
+    if (img) {
+      img.onerror = () => {
+        if (img.src.indexOf(DATA.map.fallbackUrl) === -1) img.src = DATA.map.fallbackUrl;
+      };
+    }
+
+    renderPinsLayer(document.getElementById("modal-map-pins"));
+
+    const legendEl = document.getElementById("modal-map-legend");
+    if (legendEl) {
+      legendEl.innerHTML = "";
+      DATA.map.pins.forEach((pin) => {
+        const li = document.createElement("li");
+        li.className = "legend-item";
+        li.dataset.legendPin = pin.id;
+        li.tabIndex = 0;
+        li.setAttribute("role", "button");
+        li.innerHTML = `
+          <span class="legend-pin">${toFaDigits(pin.number)}</span>
+          <div>
+            <div class="legend-name">${toFaDigits(pin.name)}</div>
+            <div class="legend-desc">${toFaDigits(pin.desc)}</div>
+          </div>
+        `;
+        li.addEventListener("click", () => renderFloatingPinCard(pin.id));
+        li.addEventListener("keydown", (e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            renderFloatingPinCard(pin.id);
+          }
+        });
+        legendEl.appendChild(li);
+      });
+    }
+
+    const resetBtn = document.getElementById("modal-zoom-reset-btn");
+    modalMapCtrl = createMapController(
+      document.getElementById("modal-map-viewport"),
+      document.getElementById("modal-map-stage"),
+      {
+        isFullscreen: true,
+        onZoomChange: (s) => setHidden(resetBtn, s <= 1)
+      }
+    );
+
+    document.getElementById("modal-zoom-in-btn").addEventListener("click", () => modalMapCtrl.zoomIn());
+    document.getElementById("modal-zoom-out-btn").addEventListener("click", () => modalMapCtrl.zoomOut());
+    resetBtn.addEventListener("click", () => modalMapCtrl.reset());
+  }
+
+  // ==========================================================================
+  // برگه چاپ اختصاصی A4 (از هر قدمی قابل چاپ)
+  // ==========================================================================
+  function renderPrintSheet() {
+    const sheet = document.getElementById("print-sheet");
+    if (!sheet) return;
+
+    const major = getActiveMajor();
+    const { applicableItems, applicableCompletedCount, applicableTotalCount } = getChecklistStats();
+
+    const majorSummaryHtml = major
+      ? `
+        <div class="print-summary-box">
+          <div><strong>رشته قبولی:</strong> ${toFaDigits(major.label)}</div>
+          <div><strong>روز مراجعه حضوری:</strong> ${toFaDigits(major.date)}</div>
+          <div><strong>ساختمان و نشانی دقیق:</strong> ${toFaDigits(major.address)}</div>
+          <div><strong>ثبت‌نام آنلاین هم‌آوا:</strong> دوشنبه ۱۴۰۵/۰۹/۰۲ تا پنجشنبه ۱۴۰۵/۰۹/۰۵</div>
+          ${major.warningBanner ? `<div class="print-warning">${toFaDigits(major.warningBanner)}</div>` : ""}
+        </div>
+      `
+      : `
+        <div class="print-summary-box">
+          <div><strong>ثبت‌نام آنلاین هم‌آوا:</strong> دوشنبه ۱۴۰۵/۰۹/۰۲ تا پنجشنبه ۱۴۰۵/۰۹/۰۵</div>
+          <div><strong>ثبت‌نام حضوری:</strong> شنبه ۱۴۰۵/۰۹/۰۷ تا دوشنبه ۱۴۰۵/۰۹/۰۹ (حضور شخص پذیرفته‌شده الزامی است)</div>
+        </div>
+      `;
+
+    const itemsHtml = applicableItems
+      .map((item) => {
+        const done = state.checkedDocs.has(item.id);
+        return `
+          <li class="print-check-item">
+            <span class="print-box">${done ? "✓" : ""}</span>
+            <div>
+              <strong>${toFaDigits(item.title)}</strong>
+              ${item.guide ? ` <span class="print-tag">(${toFaDigits(item.guide)})</span>` : ""}
+            </div>
+          </li>
+        `;
+      })
+      .join("");
+
+    sheet.innerHTML = `
+      <div class="print-header">
+        <h1>چک‌لیست اختصاصی روز ثبت‌نام نوورودی‌های ۱۴۰۵–۱۴۰۶</h1>
+        <p>دانشگاه علوم پزشکی هرمزگان — تهیه و طراحی: شورای صنفی دانشجویان</p>
+      </div>
+      ${majorSummaryHtml}
+      <h2 class="print-section-title">مدارک مورد نیاز شما (${toFaDigits(applicableCompletedCount)} از ${toFaDigits(applicableTotalCount)} مورد آماده شده)</h2>
+      <ul class="print-check-list">${itemsHtml}</ul>
+      <div class="print-footer">
+        طراحی و توسعه توسط محمدامین جعفری • شورای صنفی دانشجویان دانشگاه علوم پزشکی هرمزگان (t.me/hums_senfi)
+      </div>
+    `;
   }
 
   // ==========================================================================
   // راه‌اندازی اولیه
   // ==========================================================================
+  function initEventListeners() {
+    // کلیک روی چیپ رشته در نوار بالا -> رفتن به قدم ۱ برای ویرایش
+    document.getElementById("utility-major-chip").addEventListener("click", () => navigateTo(1));
+
+    // دکمه‌های کشوهای نوار بالا
+    document.getElementById("open-map-drawer-btn").addEventListener("click", () => openDrawer("map"));
+    document.getElementById("open-faq-drawer-btn").addEventListener("click", () => openDrawer("faq"));
+    document.getElementById("open-essentials-drawer-btn").addEventListener("click", () => openDrawer("essentials"));
+
+    // چیپ‌های دسترسی سریع در صفحه شروع
+    document.querySelectorAll("[data-open-drawer]").forEach((btn) => {
+      btn.addEventListener("click", () => openDrawer(btn.dataset.openDrawer));
+    });
+
+    // بستن کشوها با دکمه ×، کلیک بیرون یا Escape
+    document.querySelectorAll(".drawer-overlay").forEach((overlay) => {
+      overlay.addEventListener("click", (e) => {
+        if (e.target === overlay) closeAllDrawers(true);
+      });
+    });
+    document.querySelectorAll("[data-close-drawer]").forEach((btn) => {
+      btn.addEventListener("click", () => closeAllDrawers(true));
+    });
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && state.activeDrawer) {
+        closeAllDrawers(true);
+      }
+    });
+
+    // جستجوی سوالات متداول داخل کشوی FAQ
+    const faqInput = document.getElementById("faq-search-input");
+    const faqClear = document.getElementById("faq-search-clear");
+    faqInput.addEventListener("input", () => {
+      state.faqQuery = faqInput.value;
+      setHidden(faqClear, !faqInput.value);
+      renderFaqs();
+    });
+    faqClear.addEventListener("click", () => {
+      faqInput.value = "";
+      state.faqQuery = "";
+      setHidden(faqClear, true);
+      renderFaqs();
+      faqInput.focus();
+    });
+
+    // دکمه‌های مرحله قبل / مرحله بعد پایین هر قدم
+    document.getElementById("wizard-prev-btn").addEventListener("click", () => {
+      if (typeof state.currentRoute === "number") {
+        if (state.currentRoute === 1) navigateTo("welcome");
+        else navigateTo(state.currentRoute - 1);
+      }
+    });
+
+    document.getElementById("wizard-next-btn").addEventListener("click", () => {
+      if (typeof state.currentRoute === "number") {
+        if (state.currentRoute === 5) navigateTo("welcome");
+        else navigateTo(state.currentRoute + 1);
+      }
+    });
+
+    // شنیدن تغییر URL Hash (دکمه Back و Forward گوشی/مرورگر)
+    window.addEventListener("hashchange", () => {
+      if (state.activeDrawer) closeAllDrawers(false);
+      applyRoute(parseHashRoute(), true);
+    });
+  }
+
   function init() {
-    renderHeaderAndFooter();
-    renderMyPathCard();
-    renderTimeline();
-    renderOfficialNotice();
-    renderProfileBuilder();
-    initChecklistControls();
-    renderChecklist();
-    updateBottomNavBadge();
-    renderFacultySelector();
-    renderStepper();
-    renderMapAndLegend();
-    renderExtraAddresses();
-    initInteractiveMaps();
-    renderAssociations();
-    renderStatusBoard();
-    initFaqSearch();
+    initModalMap();
+    renderEssentialsDrawer();
     renderFaqs();
-    initScrollSpy();
+    renderPrintSheet();
+    initEventListeners();
+    applyRoute(parseHashRoute(), false);
   }
 
   if (document.readyState === "loading") {

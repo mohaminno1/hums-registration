@@ -878,8 +878,8 @@ window.GUIDE_DATA = {
     externalNoteTitle: "محل ثبت‌نام حضوری دانشکده‌ها",
     externalNoteText:
       "ورودی‌های داروسازی، دندانپزشکی و بهداشت برای ثبت‌نام حضوری به دانشکده داروسازی (شماره ۱) مراجعه می‌کنند. ورودی‌های پزشکی (شماره ۲)، پرستاری و مامایی (شماره ۸) و پیراپزشکی (شماره ۹) هرکدام به دانشکده خودشان می‌روند. (آدرس دانشکده دندانپزشکی خارج از پردیس: بلوار ناصر، جنب بیمارستان شریعتی — روز ثبت‌نام به آنجا نروید!)",
-    imageUrl: "assets/campus-map.jpg",
-    fallbackUrl: "assets/campus-map.webp",
+    imageUrl: "assets/campus-map.webp",
+    fallbackUrl: "assets/campus-map.jpg",
     pins: [
       {
         id: "pin-1",
