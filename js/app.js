@@ -816,6 +816,9 @@
           <span class="step-kicker-pill">قدم ۳ از ۵</span>
           <h2 class="step-surface-title">آماده‌سازی مدارک اختصاصی تو</h2>
           <p class="step-surface-desc">فقط مدارک مربوط به شرایط خودت نمایش داده می‌شود؛ تیک‌ها در مرورگرت ذخیره می‌شوند.</p>
+          <div style="margin-top: 12px; margin-bottom: 16px; padding: 10px 14px; border-radius: 12px; background: #fffbeb; border: 1px solid #fde68a; border-right: 4px solid #d97706; color: #78350f; font-size: 0.9rem; line-height: 1.7;">
+            <strong>💡 یادآوری مهم:</strong> محض اطمینان از تمام مدارک و فرم‌های خود <strong>حداقل یک سری کپی اضافه</strong> همراه داشته باشید تا در روز ثبت‌نام معطل صف فتوکپی نشوید و در صورت نیاز بعدی به مشکل نخورید.
+          </div>
         </div>
 
         <div class="card checklist-card">
