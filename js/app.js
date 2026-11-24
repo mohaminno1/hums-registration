@@ -643,7 +643,7 @@
         <!-- کارت خلاصه آزمون زبان و شروع کلاس‌ها -->
         <div class="step2-mini-grid">
           <article class="card step2-mini-card">
-            <span class="step2-mini-label">آزمون تعیین سطح زبان</span>
+            <span class="step2-mini-label">آزمون تعیین سطح زبان (برای ورودی ۴۰۵)</span>
             <strong class="step2-mini-value">${isSecondSem ? "بهمن‌ماه ۱۴۰۵" : "چهارشنبه ۱۴۰۵/۰۹/۱۱"}</strong>
             <span class="step2-mini-note">${isSecondSem ? "ویژه ورودی‌های نیمسال دوم پیش از انتخاب واحد بهمن" : "ویژه نیمسال اول (نیمسال دومی‌ها در بهمن‌ماه)"}</span>
           </article>
