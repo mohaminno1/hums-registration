@@ -650,7 +650,8 @@
           <article class="card step2-mini-card">
             <span class="step2-mini-label">شروع کلاس‌ها</span>
             <strong class="step2-mini-value">${isSecondSem ? "بهمن‌ماه ۱۴۰۵" : "شنبه ۱۴۰۵/۰۹/۱۴"}</strong>
-            <span class="step2-mini-note">برنامه کلاسی پس از انتخاب واحد حضوری در هم‌آوا نمایش داده می‌شود.</span>
+            <span class="step2-mini-note">"بجز ورودی های ۴۰۶"
+            برنامه کلاسی پس از انتخاب واحد حضوری در هم‌آوا نمایش داده می‌شود.</span>
           </article>
         </div>
       </div>
