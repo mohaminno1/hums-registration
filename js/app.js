@@ -1480,11 +1480,11 @@
         </div>
 
         <div class="essentials-section">
-          <h4 class="essentials-heading">کانال رسمی شورای صنفی</h4>
+          <h4 class="essentials-heading">کانال رسمی شورای صنفی دانشکده دندانپزشکی</h4>
           <div class="essentials-btn-stack">
             <a href="${DATA.meta.footerChannelUrl}" target="_blank" rel="noopener noreferrer" class="footer-channel-btn">
               ${ICONS.send}
-              <span>کانال تلگرام شورای صنفی دانشجویان</span>
+              <span>کانال تلگرام شورای صنفی دانشکده دندانپزشکی</span>
             </a>
           </div>
         </div>
@@ -1864,13 +1864,13 @@
     sheet.innerHTML = `
       <div class="print-header">
         <h1>چک‌لیست اختصاصی روز ثبت‌نام نوورودی‌های ۱۴۰۵–۱۴۰۶</h1>
-        <p>دانشگاه علوم پزشکی هرمزگان — تهیه و طراحی: شورای صنفی دانشجویان</p>
+        <p>دانشگاه علوم پزشکی هرمزگان — تهیه و طراحی: شورای صنفی دانشکده دندانپزشکی</p>
       </div>
       ${majorSummaryHtml}
       <h2 class="print-section-title">مدارک مورد نیاز شما (${toFaDigits(applicableCompletedCount)} از ${toFaDigits(applicableTotalCount)} مورد آماده شده)</h2>
       <ul class="print-check-list">${itemsHtml}</ul>
       <div class="print-footer">
-        طراحی و توسعه توسط محمدامین جعفری • شورای صنفی دانشجویان دانشگاه علوم پزشکی هرمزگان (t.me/hums_senfi)
+        طراحی و توسعه توسط محمدامین جعفری • شورای صنفی دانشکده دندانپزشکی دانشگاه علوم پزشکی هرمزگان (t.me/hums_senfi)
       </div>
     `;
   }
