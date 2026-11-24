@@ -1484,7 +1484,7 @@
           <div class="essentials-btn-stack">
             <a href="${DATA.meta.footerChannelUrl}" target="_blank" rel="noopener noreferrer" class="footer-channel-btn">
               ${ICONS.send}
-              <span>کانال تلگرام شورای صنفی دانشکده دندانپزشکی</span>
+              <span>کانال تلگرام شورای صنفی</span>
             </a>
           </div>
         </div>
